@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>MyCad · ویرایشگر نقشه</title>
+<meta name="description" content="ویرایشگر ساده‌ی نقشه‌ی معماری، فارسی و تحت وب. باز کردن DWG و DXF، خروجی PDF و DXF. پروژه‌ها فقط در مرورگر خودتان ذخیره می‌شوند.">
+<meta name="theme-color" content="#2563EB">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="stage">
+  <div class="app" id="app" dir="rtl">
+    <div class="cv"><canvas></canvas></div>
+    <nav class="card bar l" aria-label="عمومی">
+      <button class="ib" data-pane="file" data-icon="file" data-tip="فایل و نقشه‌های نمونه"></button>
+      <button class="ib" data-pane="floors" data-icon="floors" data-tip="طبقات"></button>
+      <button class="ib" data-pane="layers" data-icon="layers" data-tip="لایه‌ها"></button>
+      <button class="ib" data-pane="view" data-icon="view" data-tip="نمایش"></button>
+      <hr>
+      <button class="ib" data-act="undo" data-icon="undo" data-tip="برگشت · Ctrl Z" aria-label="برگشت"></button>
+      <button class="ib" data-act="redo" data-icon="redo" data-tip="دوباره · Ctrl Y" aria-label="دوباره"></button>
+    </nav>
+    <div class="pop l shut" data-lpop><span class="arw"></span><div class="ph"></div><div class="pin"></div><span class="fade t"></span><span class="fade b"></span></div>
+    <nav class="card bar r" aria-label="ابزارهای ترسیم" data-tools></nav>
+    <div class="pop r shut" data-rpop><span class="arw"></span><div class="ph"></div><div class="pin"></div><span class="fade t"></span><span class="fade b"></span></div>
+    <div class="card pill" data-pill hidden></div>
+    <div class="toast" data-toast hidden></div>
+  </div>
+</div>
+
+<script src="js/base.js"></script>
+<script src="js/catalog.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/export.js"></script>
+<script src="js/dwg-import.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/leftbar.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+// ---------- left bar ----------
+function leftUI(){const pop=$('[data-lpop]'),pin=pop.querySelector('.pin');$$('[data-pane]').forEach(b=>{b.classList.toggle('on',b.dataset.pane===lPane);b.classList.toggle('po',b.dataset.pane===lPane)});
+  if(!lPane){pop.classList.add('shut');return}const keep=pop.dataset.key===lPane?pin.scrollTop:0;pop.dataset.key=lPane;pin.innerHTML='';pop.querySelector('.ph').innerHTML='';
+  const titles={file:['فایل','پروژه‌ها در همین مرورگر ذخیره می‌شوند'],floors:['طبقات',`${fa(P.floors.length)} طبقه در این پروژه`],layers:['لایه‌ها',P.imported?`${fa(P.imported.layers.length)} لایه از فایل اصلی`:'نمایش، پنهان و قفل گروه‌ها'],view:['نمایش','شبکه، چسبندگی، بزرگ‌نمایی، رنگ']};
+  head(pin,lPane,titles[lPane][0],titles[lPane][1],()=>{lPane=null;leftUI()});
+  const sec=el('div','ds');pin.append(sec);
+  if(lPane==='file'){const nm=el('input','fname');nm.value=P.name;nm.setAttribute('aria-label','نام پروژه');nm.onchange=()=>renameProject(nm.value);nm.onkeydown=ev=>{if(ev.key==='Enter')nm.blur()};
+    sec.append(nm,el('div','saved',`<span data-saved></span>`));const acts=el('div','acts'),nw=el('button','btn',svg('plus')+'پروژه‌ی جدید'),op=el('button','btn',svg('open')+'باز کردن…'),bk=el('button','btn',svg('down')+'فایل پشتیبان');
+    nw.onclick=newProject;bk.title='کل پروژه به صورت یک فایل .mycad؛ با «باز کردن» دوباره باز می‌شود';bk.onclick=backupProject;
+    op.onclick=()=>{let i=$('[data-openfile]');if(!i){i=document.createElement('input');i.type='file';i.accept='.dwg,.dxf,.mycad,.json';i.hidden=true;i.dataset.openfile='';i.onchange=()=>{if(i.files[0])openCad(i.files[0]);i.value=''};app.append(i)}i.click()};acts.append(nw,op,bk);sec.append(acts);
+    if(myList.length){const s1=el('div','ds');s1.append(el('p','eb','پروژه‌های من'));const list=el('div','list');myList.forEach(it=>{const r=el('div','lay proj'+(it.id===P.id?' on':''),`<span class="nm">${htmlEsc(it.name)}</span><em>${new Date(it.updated).toLocaleDateString('fa-IR')}</em>`),del=el('button','ic',svg('trash'));
+      r.querySelector('.nm').onclick=()=>{if(it.id!==P.id)openSaved(it.id)};del.title='پاک کردن '+it.name;del.onclick=()=>deleteSaved(it.id);r.append(del);list.append(r)});s1.append(list);pin.append(s1)}
+    expUI(pin);
+    const s2=el('div','ds');s2.append(el('p','eb','نقشه‌های نمونه'));PROJ.forEach((pr,i)=>{const b=el('button','demo'+(P.sample===i&&!P.id?' on':''),`<span class="di">${svg('plan')}</span><div><b>${pr.name}</b><small>${pr.desc}</small></div>`);b.onclick=async()=>{if(!saved)await saveNow();hidden.clear();locked.clear();loadProject(sampleCopy(i))};s2.append(b)});pin.append(s2);
+    const s3=el('div','ds');s3.append(el('p','hint','همه‌چیز فقط در همین مرورگر ذخیره می‌شود و به هیچ سروری فرستاده نمی‌شود. اگر داده‌های مرورگر پاک شود پروژه‌ها هم پاک می‌شوند؛ برای اطمینان «فایل پشتیبان» بگیرید. فایل‌های DWG و DXF هم مستقیم باز می‌شوند.'));pin.append(s3);saveStatus()}
+  if(lPane==='floors'){const eb=el('p','eb','طبقات'),add=el('button','','+ افزودن طبقه');add.onclick=()=>{const keep=ents().filter(e=>['wall','column','elevator','stairs','window'].includes(e.t)).map(e=>{const c=JSON.parse(JSON.stringify(e));delete c.join;return c});P.floors.unshift({name:'طبقه‌ی '+fa(P.floors.length+1),ents:keep});P.hist.unshift({undo:[],redo:[]});fl=0;sel=null;computeJoins();refresh();draw();markDirty();flash('طبقه‌ی جدید با دیوارها و هسته‌ی همین طبقه ساخته شد.')};eb.append(add);sec.append(eb);
+    const list=el('div','list');P.floors.forEach((f,i)=>{const b=el('button','item'+(i===fl?' on':''),`<span class="nm">${f.name}</span><em>${fa(f.ents.length)} المان</em>`);b.onclick=()=>{fl=i;sel=null;pts=[];meas=null;cutA=null;computeJoins();refresh();draw()};list.append(b)});sec.append(list)}
+  if(lPane==='layers'){const list=el('div','list'),LN=P.imported?Object.fromEntries(P.imported.layers.map(k=>[k,k])):LAYERS,cnt={};ents().forEach(e=>{const k=layOf(e);cnt[k]=(cnt[k]||0)+1});for(const k in LN){const n=cnt[k]||0,r=el('div','lay'+(hidden.has(k)?' off':''),`<span class="nm">${LN[k]}</span><em>${fa(n)}</em>`);
+      const eye=el('button','ic',svg(hidden.has(k)?'eyeoff':'eye'));eye.title=(hidden.has(k)?'نمایش ':'پنهان کردن ')+LN[k];eye.onclick=()=>{hidden.has(k)?hidden.delete(k):hidden.add(k);if(sel&&layOf(sel)===k)sel=null;refresh();draw()};
+      const lk=el('button','ic'+(locked.has(k)?' act':''),svg(locked.has(k)?'lock':'unlock'));lk.title=(locked.has(k)?'باز کردن قفل ':'قفل ')+LN[k];lk.onclick=()=>{locked.has(k)?locked.delete(k):locked.add(k);if(sel&&layOf(sel)===k)sel=null;refresh();draw()};
+      r.append(eye,lk);list.append(r)}sec.append(list)}
+  if(lPane==='view'){const sw=(k,lab)=>{const r=el('div','opt',`<span>${lab}</span>`),b=el('button','sw'+(opt[k]?' on':''));b.setAttribute('aria-label',lab);b.onclick=()=>{opt[k]=!opt[k];b.classList.toggle('on',opt[k]);draw();if(tool==='measure')rightUI()};r.append(b);return r};
+    sec.append(sw('grid','شبکه'),sw('snap','چسبیدن به سر دیوارها و شبکه'),sw('wallDims','طول دیوارها روی نقشه'),unitSeg());
+    const z=el('div','opt','<span>بزرگ‌نمایی</span>'),zb=el('span','zoom'),zo=el('button','ic',svg('minus')),zv=el('span','',fa(Math.round(s/s0*100))+'٪'),zi=el('button','ic',svg('plus')),zf=el('button','ic',svg('fit'));zv.dataset.zoom='';zo.title='کوچک‌نمایی';zi.title='بزرگ‌نمایی';zf.title='کل نقشه';
+    zo.onclick=()=>zoomAt(W/2,Hh/2,.8);zi.onclick=()=>zoomAt(W/2,Hh/2,1.25);zf.onclick=()=>{fit();draw();zv.textContent='۱۰۰٪'};zb.append(zi,zv,zo,zf);z.append(zb);sec.append(z);
+    const m=el('div','f wide','<label>رنگ‌بندی</label>'),sg=el('div','seg');[['light','آبی و سفید'],['dark','آبی و مشکی']].forEach(([v,l])=>{const b=el('button',(app.dataset.mode||'light')===v?'on':'',l);b.onclick=()=>{app.dataset.mode=v;readColors();refresh();draw();savePrefs()};sg.append(b)});m.append(sg);sec.append(m)}
+  pop.classList.remove('shut');pin.scrollTop=keep;place(pop,$(`[data-pane="${lPane}"]`),'l');fades(pop)}
+function loadProject(pr){P=pr;saved=true;clearTimeout(saveT);fl=0;sel=null;pts=[];meas=null;cutA=null;chainStart=null;if(mob())lPane=null;computeJoins();fit();refresh();draw()}
+$$('[data-pane]').forEach(b=>b.addEventListener('click',()=>{lPane=lPane===b.dataset.pane?null:b.dataset.pane;if(lPane&&mob())rOpen=false;leftUI();rightUI()}));
+$$('[data-act]').forEach(b=>b.addEventListener('click',()=>b.dataset.act==='undo'?undo():redo()));
+
+function syncBar(){$$('[data-tools] .ib').forEach(b=>{const i=+b.dataset.group,k=gCur[i];b.innerHTML=svg(k);b.dataset.tool=k;b.dataset.tip=(GNAME[i]?GNAME[i]+'، ':'')+TOOLS[k][0]+'  '+TOOLS[k][1];b.setAttribute('aria-label',TOOLS[k][0])})}
+function toolsInit(){const bar=$('[data-tools]');GROUPS.forEach((g,i)=>{if(GBREAK.includes(i))bar.append(document.createElement('hr'));const b=el('button','ib'+(g.length>1?' grp':''));b.dataset.group=i;b.onclick=()=>setTool(gCur[i]);bar.append(b)});syncBar();
+  bar.addEventListener('scroll',()=>{const pop=$('[data-rpop]');if(!pop.classList.contains('shut')){const a=$('[data-tools] .ib.po');if(a)place(pop,a,'r')}},{passive:true})}
+function refresh(){rightUI();leftUI()}
+function setTool(t){if(t===tool&&(t!=='select'||sel)){rOpen=!rOpen;if(rOpen&&mob())lPane=null;refresh();return}
+  if(drafting())finishDraft();tool=t;gCur[gOf(t)]=t;syncBar();pvKey=null;pts=[];chainStart=null;cutA=null;snapPt=null;ghost=null;meas=null;if(t!=='select')sel=null;rOpen=true;if(mob())lPane=null;canvas.style.cursor=t==='select'?'default':'crosshair';updateGhost();refresh();draw()}
+function esc(){if(drafting()){pts=[];chainStart=null;cutA=null;if(meas&&!meas.fin)meas=null}else if(meas){meas=null}else if(sel){sel=null}else{rOpen=false;lPane=null}refresh();draw()}
