@@ -200,6 +200,8 @@ body{margin:0;font-family:var(--font)}
 .lay em{margin-inline-end:4px}
 .lay.off .nm,.lay.off em{opacity:.35}
 .ic{width:30px;height:30px;border:0;background:transparent;border-radius:6px;display:grid;place-items:center;color:var(--mute)}
+.ic:disabled{opacity:.3;cursor:default;background:transparent}
+.lay .fname{flex:1;min-width:0;height:30px;margin:2px 0;font-size:12.5px;border-color:var(--acc);background:var(--bg)}
 .ic:hover{background:var(--bg);color:var(--ink)}
 .ic.act{color:var(--acc)}
 .opt{display:flex;align-items:center;justify-content:space-between;gap:10px}
