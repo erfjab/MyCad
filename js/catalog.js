@@ -50,7 +50,7 @@ const PRESETS={
   door:[{nm:'سرویس ۷۰',leaves:1,w:700},{nm:'اتاق ۹۰',leaves:1,w:900},{nm:'ورودی ۱۱۰',leaves:1,w:1100},{nm:'دولنگه مساوی',leaves:2,w1:800,w2:800},{nm:'لنگه و نیم',leaves:2,w1:900,w2:400},{nm:'دولنگه پهن',leaves:2,w1:1000,w2:1000}],
   window:[{nm:'کوچک ۹۰',w:900,panes:1},{nm:'معمولی ۱۵۰',w:1500,panes:2},{nm:'عریض ۲۴۰',w:2400,panes:3},{nm:'نواری ۳۶۰',w:3600,panes:4}],
   elevator:[{nm:'۶۳۰ کیلوگرم',w:1100,d:1400,dw:800},{nm:'۱۰۰۰ کیلوگرم',w:1600,d:1400,dw:900},{nm:'تخت‌بر',w:1400,d:2400,dw:1300},{nm:'خودروبر',w:2700,d:5800,dw:2500}],
-  stairs:[{nm:'یو آپارتمانی',kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100},{nm:'یک‌طرفه',kind:'straight',w:1000,tread:280,floorH:3200,n:19},{nm:'ال با پاگرد',kind:'l',w:1000,tread:280,floorH:3200,n:19,n1:7},{nm:'گرد (مارپیچ)',kind:'spiral',w:800,floorH:3200,n:16,sweep:330}],
+  stairs:[{nm:'یو آپارتمانی',kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100},{nm:'یک‌طرفه',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:0,l0:0,l1:0},{nm:'یک‌طرفه با پاگرد وسط',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:1,m1:9,d1:1100,l0:0,l1:0},{nm:'ال با پاگرد',kind:'l',w:1000,tread:280,floorH:3200,n:19,n1:7},{nm:'قیچی با پاگرد',kind:'scissor',w:1000,tread:280,floorH:3200,n:19,nl:0,l0:1000,l1:1000,gap:0},{nm:'گرد (مارپیچ)',kind:'spiral',w:800,floorH:3200,n:16,sweep:330}],
   car:[{nm:'تک‌واحد',layout:'single'},{nm:'دو خودرو کنار هم',layout:'pair'},{nm:'بین دو ستون',layout:'pairc',clear:4500},{nm:'ردیف سه‌تایی',layout:'row',n:3},{nm:'پشت سر هم',layout:'tandem'},{nm:'سه خودرو بین ستون',layout:'row3c',clear:7000}],
   axes:[{nm:'۳ × ۲ دهانه‌ی ۴ متری',xs:[4000,4000,4000],ys:[4000,4000]},{nm:'آپارتمان ۱۰ × ۲۰',xs:[3500,3000,3500],ys:[4500,4000,3500,4000,4000]},{nm:'۴ × ۳ دهانه‌ی ۵ متری',xs:[5000,5000,5000,5000],ys:[5000,5000,5000]},{nm:'پارکینگ ۵٫۵ متری',xs:[5500,5500,5500],ys:[5500,5500]}],
   column:[{nm:'۳۰ × ۳۰',w:300,d:300,round:0},{nm:'۴۰ × ۴۰',w:400,d:400,round:0},{nm:'گرد ۵۰',w:500,d:500,round:1},{nm:'۶۰ × ۳۰',w:600,d:300,round:0}],
@@ -59,9 +59,9 @@ const PRESETS={
   text:[{nm:'عنوان',size:600,bold:1},{nm:'نام اتاق',size:350,bold:1},{nm:'برچسب',size:250,bold:0},{nm:'یادداشت',size:180,bold:0}]
 };
 const LN={solid:'ممتد',dashed:'خط‌چین',center:'محور'};
-const SKIND={straight:'یک‌طرفه',l:'ال',u:'یو',spiral:'گرد'};
+const SKIND={straight:'یک‌طرفه',l:'ال',u:'یو',scissor:'قیچی',spiral:'گرد'};
 const PSPEC={wall:p=>`${cm(p.th)} سانت`,line:p=>`${LN[p.dash]}، ${['','نازک','متوسط','ضخیم'][p.lw]}`,door:p=>p.leaves===2?`${cm(p.w1)} + ${cm(p.w2)} سانت`:`${cm(p.w)} سانت`,
-  window:p=>`${cm(p.w)} سانت، ${fa(p.panes)} لنگه`,elevator:p=>`${cm(p.w)} × ${cm(p.d)}`,stairs:p=>`${SKIND[p.kind]}، عرض ${cm(p.w)}، ${fa(p.n)} پله`,car:p=>carSpec(p),column:p=>p.round?`قطر ${cm(p.w)}`:`${cm(p.w)} × ${cm(p.d)} سانت`,
+  window:p=>`${cm(p.w)} سانت، ${fa(p.panes)} لنگه`,elevator:p=>`${cm(p.w)} × ${cm(p.d)}`,stairs:p=>`${SKIND[p.kind]}، عرض ${cm(p.w)}، ${fa(p.n)} پله${p.nl?'، '+fa(p.nl)+' پاگرد میانی':''}`,car:p=>carSpec(p),column:p=>p.round?`قطر ${cm(p.w)}`:`${cm(p.w)} × ${cm(p.d)} سانت`,
   axes:p=>`${fa(p.xs.length)} × ${fa(p.ys.length)} دهانه، ${fa(p.xs.reduce((a,b)=>a+b,0)/1000,1)} × ${fa(p.ys.reduce((a,b)=>a+b,0)/1000,1)} متر`,
   cut:p=>p.mode==='gap'?`بازشوی ${cm(p.gw)} سانت`:p.mode==='points'?'شروع و پایان را بزنید':'بین دو تقاطع',hatch:p=>p.pat==='solid'?'رنگ توپر':`${PATN[p.pat]} ${cm(p.sp)}${p.ang?'، ۴۵ درجه':''}`,text:p=>`${cm(p.size)} سانت${p.bold?'، ضخیم':''}`};
 function carSpec(p){const g=carGeo(p);return p.layout==='pairc'||p.layout==='row3c'?`${fa((p.clear||4500)/1000,1)} متر بین ستون‌ها`:`${fa(g.W/1000,1)} × ${fa(g.L/1000,1)} متر`}
@@ -73,11 +73,14 @@ const FIELDS={
   door:[{k:'leaves',l:'تعداد لنگه',type:'seg',opts:[['یک‌لنگه',1],['دولنگه',2]]},{k:'w',l:'عرض در',type:'num',u:'cm',min:500,max:3000,step:10,when:o=>o.leaves!==2},{k:'w1',l:'لنگه‌ی اول',type:'num',u:'cm',min:200,max:1500,step:10,when:o=>o.leaves===2},{k:'w2',l:'لنگه‌ی دوم',type:'num',u:'cm',min:200,max:1500,step:10,when:o=>o.leaves===2},{k:'h',l:'ارتفاع',type:'num',u:'cm',min:1800,max:3500,step:10},{k:'swing',l:'زاویه‌ی باز شدن',type:'num',u:'°',min:30,max:180,step:5},{k:'flip',l:'سمت لولا',type:'seg',opts:[['راست',false],['چپ',true]]},{k:'side',l:'باز شدن به',type:'seg',opts:[['این طرف',1],['آن طرف',-1]],sel:1}],
   window:[{k:'w',l:'عرض',type:'num',u:'cm',min:300,max:8000,step:50},{k:'sill',l:'ارتفاع از کف',type:'num',u:'cm',min:0,max:2000,step:50},{k:'panes',l:'تعداد لنگه',type:'num',u:'',min:1,max:8,step:1}],
   elevator:[{k:'w',l:'عرض کابین',type:'num',u:'cm',min:800,max:3500,step:10},{k:'d',l:'عمق کابین',type:'num',u:'cm',min:800,max:7000,step:10},{k:'dw',l:'عرض در',type:'num',u:'cm',min:600,max:3000,step:10},ROT],
-  stairs:[{k:'kind',l:'نوع پله',type:'seg',opts:[['یک‌طرفه','straight'],['ال (L)','l'],['یو (U)','u'],['گرد','spiral']]},
+  stairs:[{k:'kind',l:'نوع پله',type:'seg',opts:[['یک‌طرفه','straight'],['ال (L)','l'],['یو (U)','u'],['قیچی (دو رشته)','scissor'],['گرد','spiral']]},
     {k:'floorH',l:'ارتفاع طبقه',type:'num',u:'cm',min:2000,max:6000,step:50},{k:'n',l:'تعداد پله',type:'num',u:'عدد',min:3,max:40,step:1},
     {k:'tread',l:'کف پله (عمق)',type:'num',u:'cm',min:220,max:400,step:5,when:o=>o.kind!=='spiral'},{k:'w',l:'عرض پله',type:'num',u:'cm',min:600,max:3000,step:10},
     {k:'n1',l:'پله‌ها تا پاگرد',type:'num',u:'عدد',min:2,max:38,step:1,when:o=>o.kind==='l'||o.kind==='u'},
-    {k:'ld',l:'عمق پاگرد',type:'num',u:'cm',min:800,max:3000,step:10,when:o=>o.kind==='u'},{k:'gap',l:'چشمه‌ی وسط',type:'num',u:'cm',min:0,max:2000,step:10,when:o=>o.kind==='u'},
+    {k:'ld',l:'عمق پاگرد',type:'num',u:'cm',min:800,max:3000,step:10,when:o=>o.kind==='u'},{k:'gap',l:'چشمه‌ی وسط',type:'num',u:'cm',min:0,max:2000,step:10,when:o=>o.kind==='u'||o.kind==='scissor'},
+    {k:'l0',l:'پاگرد ابتدا (پایین پله)',type:'num',u:'cm',min:0,max:6000,step:50,when:o=>o.kind!=='spiral'},{k:'l1',l:'پاگرد انتها (بالای پله)',type:'num',u:'cm',min:0,max:6000,step:50,when:o=>o.kind!=='spiral'},
+    {k:'nl',l:'پاگرد میانی',type:'seg',opts:[['ندارد',0],['یکی',1],['دو تا',2],['سه تا',3]],when:o=>o.kind==='straight'||o.kind==='scissor'},
+    ...[1,2,3].flatMap(i=>[{k:'m'+i,l:`پاگرد ${['','اول','دوم','سوم'][i]}، بعد از پله‌ی`,type:'num',u:'عدد',min:1,max:38,step:1,when:o=>(o.kind==='straight'||o.kind==='scissor')&&(o.nl|0)>=i},{k:'d'+i,l:`عمق پاگرد ${['','اول','دوم','سوم'][i]}`,type:'num',u:'cm',min:300,max:6000,step:50,when:o=>(o.kind==='straight'||o.kind==='scissor')&&(o.nl|0)>=i}]),
     {k:'sweep',l:'زاویه‌ی گردش',type:'num',u:'°',min:90,max:360,step:15,when:o=>o.kind==='spiral'},
     {k:'turn',l:'جهت چرخش',type:'seg',opts:[['به راست',1],['به چپ',-1]],when:o=>o.kind!=='straight'},
     {k:'dir',l:'فلش',type:'seg',opts:[['بالا','up'],['پایین','down']]},{k:'cut',l:'نمایش',type:'seg',opts:[['کامل',0],['خط برش',1]]},ROT],
@@ -100,7 +103,7 @@ const FIELDS={
   dim:[{k:'off',l:'فاصله‌ی خط اندازه',type:'num',u:'cm',min:-20000,max:20000,step:50}]
 };
 const DEF={wall:{shape:'straight',th:200,h:3000},line:{shape:'straight',dash:'solid',lw:2},door:{leaves:1,w:900,w1:800,w2:800,h:2100,swing:90,flip:false},window:{w:1500,sill:900,panes:2},elevator:{w:1600,d:1400,dw:900,ang:0},
-  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},axes:{xs:[4000,4000,4000],ys:[4000,4000],lab:'n',ends:2,dims:1,ext:1500,bub:700,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
+  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,l0:0,l1:0,nl:0,m1:9,d1:1100,m2:14,d2:1100,m3:16,d3:1100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},axes:{xs:[4000,4000,4000],ys:[4000,4000],lab:'n',ends:2,dims:1,ext:1500,bub:700,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
   move:{shape:'straight'},copy:{shape:'straight'},rotate:{shape:'straight'},mirror:{shape:'straight'},scale:{},erase:{},
   hatch:{mode:'room',pat:'grid',sp:600,ang:0},text:{str:'اتاق',sub:'',size:350,bold:1,ang:0},measure:{mode:'dist'}};
 let furnCat='living';
@@ -141,24 +144,37 @@ function carGeo(e){const c=e.clear||4500,L={single:[1,1,2500,0],pair:[2,1,2500,0
 // Stair geometry in the item's local frame (x right, y down; walking up = -y at ang 0). n counts risers, so a flight shows n-1 treads.
 // Returns outlines, tread lines [p,q,riserIndex,forward], walk line, overall size and where the first step (foot) sits.
 function stairGeo(e){const n=Math.max(3,e.n|0),t=e.tread||280,w=e.w||1100,k=e.kind||'straight',tr=e.turn===-1?-1:1,n1=Math.min(n-2,Math.max(2,e.n1||Math.ceil(n/2)));
-  const O=[],L=[];let walk,core=null,sp=t,full=false;
+  const O=[],L=[];let walk,walks=null,core=null,sp=t,full=false,se=null,ee=null;
+  // a straight flight: every step slot is one tread deep, except mid landings (after step m1, m2, m3) which take their own depth; Y[i] is the line after slot i
+  const flightY=()=>{const T=n-1,sl=Array(T).fill(t);for(let i=1;i<=Math.min(3,e.nl|0);i++){const m=e['m'+i]|0;if(m>=1&&m<=T-2)sl[m]=Math.max(t,e['d'+i]||w)}const Y=[0];sl.forEach(v=>Y.push(Y[Y.length-1]-v));return Y};
   if(k==='l'){const a=n1-1,m=n-n1-1,yL=-a*t,x2=w/2+m*t;O.push([[-w/2,0],[w/2,0],[w/2,yL],[x2,yL],[x2,yL-w],[-w/2,yL-w]]);
     for(let i=1;i<=a;i++)L.push([[-w/2,-i*t],[w/2,-i*t],i+1,[0,-1]]);for(let j=0;j<m;j++)L.push([[w/2+j*t,yL],[w/2+j*t,yL-w],n1+1+j,[1,0]]);
-    walk=[[0,-t*.5],[0,yL-w/2],[x2-t*.35,yL-w/2]]}
+    walk=[[0,-t*.5],[0,yL-w/2],[x2-t*.35,yL-w/2]];se=[-w/2,w/2];ee={a:[x2,yL],b:[x2,yL-w],v:[1,0]}}
   else if(k==='u'){const g=Math.max(0,e.gap??100),ld=e.ld||w,a=n1-1,m=n-n1-1,yL=-a*t,yE=yL+m*t,X=w+g/2,x1=-(w+g)/2,x2=(w+g)/2;
     O.push([[-X,yL-ld],[X,yL-ld],[X,yL],[-X,yL]],[[-X,0],[-g/2,0],[-g/2,yL],[-X,yL]],[[g/2,yL],[X,yL],[X,yE],[g/2,yE]]);
     for(let i=1;i<a;i++)L.push([[-X,-i*t],[-g/2,-i*t],i+1,[0,-1]]);for(let j=1;j<m;j++)L.push([[g/2,yL+j*t],[X,yL+j*t],n1+1+j,[0,1]]);
-    walk=[[x1,-t*.5],[x1,yL-ld/2],[x2,yL-ld/2],[x2,yE-t*.35]]}
+    walk=[[x1,-t*.5],[x1,yL-ld/2],[x2,yL-ld/2],[x2,yE-t*.35]];se=[-X,-g/2];ee={a:[g/2,yE],b:[X,yE],v:[0,1]}}
   else if(k==='spiral'){const rc=150,R=rc+w,rw=rc+w*.55,T=n-1,sw=Math.min(360,Math.max(90,e.sweep||330))/R2D,D=sw/T,P=(r,u)=>[rw-r*Math.cos(u),-r*Math.sin(u)];full=sw>TAU-1e-3;sp=D*rw;
     const arc=(r,u0,u1,st)=>{const N=Math.max(2,Math.ceil(Math.abs(u1-u0)/(TAU/72))),o=[];for(let i=0;i<=N;i++)o.push(P(r,u0+(u1-u0)*i/N));return o};
     if(full)O.push(arc(R,0,TAU).slice(0,-1));else O.push([...arc(R,0,sw),...arc(rc,sw,0)]);
     for(let i=full?0:1;i<T;i++){const u=i*D;L.push([P(rc,u),P(R,u),i+1,[Math.sin(u),-Math.cos(u)]])}
     core={c:[rw,0],r:rc};walk=arc(rw,D*.5,Math.min(sw,TAU-.3)-D*.35)}
-  else{const T=n-1;O.push([[-w/2,0],[w/2,0],[w/2,-T*t],[-w/2,-T*t]]);for(let i=1;i<T;i++)L.push([[-w/2,-i*t],[w/2,-i*t],i+1,[0,-1]]);walk=[[0,-t*.5],[0,-T*t+t*.35]]}
-  if(k!=='straight'&&tr===-1){const mx=p=>[-p[0],p[1]];O.forEach((P,i)=>O[i]=P.map(mx));L.forEach(l=>{l[0]=mx(l[0]);l[1]=mx(l[1]);l[3]=mx(l[3])});walk=walk.map(mx);if(core)core.c=mx(core.c)}
+  // straight: every step slot is one tread deep, except mid landings (after step m1, m2, m3) which take their own depth
+  // scissor: two straight flights side by side going opposite ways, each with its own landings, arrow and label
+  else if(k==='scissor'){const g=Math.max(0,e.gap??0),T=n-1,Y=flightY(),S=-Y[T],l0=Math.max(0,e.l0||0),l1=Math.max(0,e.l1||0),Lt=l0+S+l1,xa=[-(w+g/2),-g/2],xb=[g/2,w+g/2],rc=(x,y0,y1)=>[[x[0],y0],[x[1],y0],[x[1],y1],[x[0],y1]];
+    O.push(rc(xa,-l0,-l0-S),rc(xb,-Lt+l0,-Lt+l0+S));if(l0)O.push(rc(xa,0,-l0),rc(xb,-Lt,-Lt+l0));if(l1)O.push(rc(xa,-l0-S,-Lt),rc(xb,-Lt+l0+S,0));
+    for(let i=1;i<T;i++){L.push([[xa[0],-l0+Y[i]],[xa[1],-l0+Y[i]],i+1,[0,-1]]);L.push([[xb[0],-Lt+l0-Y[i]],[xb[1],-Lt+l0-Y[i]],i+1,[0,1]])}
+    const ca=(xa[0]+xa[1])/2,cb=(xb[0]+xb[1])/2;walks=[[[ca,-l0-t*.5],[ca,-l0-S+t*.35]],[[cb,-Lt+l0+t*.5],[cb,-Lt+l0+S-t*.35]]];walk=walks[0]}
+  else{const T=n-1,Y=flightY(),S=-Y[T];O.push([[-w/2,0],[w/2,0],[w/2,-S],[-w/2,-S]]);for(let i=1;i<T;i++)L.push([[-w/2,Y[i]],[w/2,Y[i]],i+1,[0,-1]]);
+    walk=[[0,-t*.5],[0,-S+t*.35]];se=[-w/2,w/2];ee={a:[-w/2,-S],b:[w/2,-S],v:[0,-1]}}
+  // landings at the bottom (l0, before the first step) and at the top (l1, after the last step); the stair is placed by the outer edge of the bottom landing
+  const l0=se?Math.max(0,e.l0||0):0,l1=ee?Math.max(0,e.l1||0):0;
+  if(l1){const{a,b,v}=ee;O.push([a,b,[b[0]+v[0]*l1,b[1]+v[1]*l1],[a[0]+v[0]*l1,a[1]+v[1]*l1]])}
+  if(l0){O.push([[se[0],0],[se[1],0],[se[1],l0],[se[0],l0]]);const dn=p=>[p[0],p[1]-l0];O.forEach((P,i)=>O[i]=P.map(dn));L.forEach(l=>{l[0]=dn(l[0]);l[1]=dn(l[1])});walk=walk.map(dn)}
+  if(k!=='straight'&&tr===-1){const mx=p=>[-p[0],p[1]];O.forEach((P,i)=>O[i]=P.map(mx));L.forEach(l=>{l[0]=mx(l[0]);l[1]=mx(l[1]);l[3]=mx(l[3])});walk=walk.map(mx);if(walks)walks=walks.map(W_=>W_.map(mx));if(core)core.c=mx(core.c)}
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;O.flat().forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])});
-  const cx=(x0+x1)/2,cy=(y0+y1)/2,sh=p=>[p[0]-cx,p[1]-cy];O.forEach((P,i)=>O[i]=P.map(sh));L.forEach(l=>{l[0]=sh(l[0]);l[1]=sh(l[1])});walk=walk.map(sh);if(core)core.c=sh(core.c);
-  const R_=(e.floorH||3200)/n;return{O,L,walk,core,full,sp,n,R:R_,W:x1-x0,D:y1-y0,foot:[-cx,-cy],kc:Math.max(2,Math.round(1150/R_))}}
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,sh=p=>[p[0]-cx,p[1]-cy];O.forEach((P,i)=>O[i]=P.map(sh));L.forEach(l=>{l[0]=sh(l[0]);l[1]=sh(l[1])});walk=walk.map(sh);if(walks)walks=walks.map(W_=>W_.map(sh));if(core)core.c=sh(core.c);
+  const R_=(e.floorH||3200)/n;return{O,L,walk,walks:walks||[walk],l0:k==='spiral'?0:Math.max(0,e.l0||0),core,full,sp,n,R:R_,W:x1-x0,D:y1-y0,foot:[-cx,-cy],kc:Math.max(2,Math.round(1150/R_))}}
 function stairDims(e){const G=stairGeo(e);return[G.W,G.D]}
 // place a stair so its first step lands on `foot`
 function stairAt(foot,ang,props){const e={t:'stairs',...(props||DEF.stairs),ang},G=stairGeo(e),c=Math.cos(ang),sn=Math.sin(ang),lx=G.foot[0],ly=-G.foot[1];e.c=[foot[0]-(lx*c-ly*sn),foot[1]-(lx*sn+ly*c)];return e}

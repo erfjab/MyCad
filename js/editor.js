@@ -94,11 +94,14 @@ function drawItem(e,col,alpha){ctx.save();ctx.globalAlpha=alpha||1;ctx.strokeSty
       ctx.fillStyle=C.bg;G.O.forEach(P=>{poly(P);ctx.fill()});if(G.full&&G.core){ctx.beginPath();ctx.arc(G.core.c[0],G.core.c[1],G.core.r+e.w,0,TAU);ctx.fill()}
       lw(1);ctx.beginPath();G.L.filter(l=>l[2]<=kc).forEach(seg);ctx.stroke();
       if(e.cut){const rest=G.L.filter(l=>l[2]>kc);ctx.save();ctx.globalAlpha*=.4;ctx.setLineDash([70,50]);ctx.beginPath();rest.forEach(seg);ctx.stroke();ctx.restore();
-        const b=rest[0];if(b){const f=b[3],sp=G.sp,p=[b[0][0]-f[0]*sp*.5,b[0][1]-f[1]*sp*.5],q=[b[1][0]-f[0]*sp*.5,b[1][1]-f[1]*sp*.5],A=[p[0]-f[0]*sp*.3,p[1]-f[1]*sp*.3],B=[q[0]+f[0]*sp*.3,q[1]+f[1]*sp*.3],M=[(A[0]+B[0])/2,(A[1]+B[1])/2],Lb=dist(A,B)||1,u=[(B[0]-A[0])/Lb,(B[1]-A[1])/Lb],nn=[-u[1],u[0]],z=Math.min(110,sp*.45);
-          ctx.fillStyle=C.bg;lw(1.3);ctx.beginPath();[A,[M[0]-u[0]*z,M[1]-u[1]*z],[M[0]+nn[0]*z*1.3-u[0]*z*.3,M[1]+nn[1]*z*1.3-u[1]*z*.3],[M[0]-nn[0]*z*1.3+u[0]*z*.3,M[1]-nn[1]*z*1.3+u[1]*z*.3],[M[0]+u[0]*z,M[1]+u[1]*z],B].forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke()}}
+        // the break mark: on the first flight, or on each flight of a scissor stair
+        const firsts={};rest.forEach(l=>{const q=l[3].join();if(!firsts[q])firsts[q]=l});(e.kind==='scissor'?Object.values(firsts):[rest[0]]).forEach(b=>{if(b){const f=b[3],sp=G.sp,p=[b[0][0]-f[0]*sp*.5,b[0][1]-f[1]*sp*.5],q=[b[1][0]-f[0]*sp*.5,b[1][1]-f[1]*sp*.5],A=[p[0]-f[0]*sp*.3,p[1]-f[1]*sp*.3],B=[q[0]+f[0]*sp*.3,q[1]+f[1]*sp*.3],M=[(A[0]+B[0])/2,(A[1]+B[1])/2],Lb=dist(A,B)||1,u=[(B[0]-A[0])/Lb,(B[1]-A[1])/Lb],nn=[-u[1],u[0]],z=Math.min(110,sp*.45);
+          ctx.fillStyle=C.bg;lw(1.3);ctx.beginPath();[A,[M[0]-u[0]*z,M[1]-u[1]*z],[M[0]+nn[0]*z*1.3-u[0]*z*.3,M[1]+nn[1]*z*1.3-u[1]*z*.3],[M[0]-nn[0]*z*1.3+u[0]*z*.3,M[1]-nn[1]*z*1.3+u[1]*z*.3],[M[0]+u[0]*z,M[1]+u[1]*z],B].forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.stroke()}})}
       lw(1.4);G.O.forEach(P=>{poly(P);ctx.stroke()});if(G.core){ctx.fillStyle=col;ctx.beginPath();ctx.arc(G.core.c[0],G.core.c[1],G.core.r,0,TAU);ctx.fill()}
-      const wk=e.dir==='down'?G.walk.slice().reverse():G.walk;arrowPath(wk);ctx.fillStyle=col;ctx.beginPath();ctx.arc(wk[0][0],wk[0][1],45,0,TAU);ctx.fill();
-      if(170*s>5){const f0=G.walk[0],tp=[G.foot[0],G.foot[1]+230];ctx.save();ctx.translate(tp[0],tp[1]);ctx.rotate(e.ang||0);ctx.font=`700 170px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';ctx.fillStyle=col;ctx.fillText(e.dir==='down'?'پایین':'بالا',0,0);ctx.restore()}}
+      // one arrow per flight, a dot where it starts and the label just behind it (inside the bottom landing when there is one)
+      G.walks.forEach(w0=>{const wk=e.dir==='down'?w0.slice().reverse():w0;arrowPath(wk);ctx.fillStyle=col;ctx.beginPath();ctx.arc(wk[0][0],wk[0][1],45,0,TAU);ctx.fill();
+      const a=w0[0],b=w0[1],dl=Math.hypot(b[0]-a[0],b[1]-a[1])||1,bk=(e.tread||280)*.5+(G.l0>=600?G.l0*.5:230),tp=[a[0]-(b[0]-a[0])/dl*bk,a[1]-(b[1]-a[1])/dl*bk];
+      if(170*s>5){ctx.save();ctx.translate(tp[0],tp[1]);ctx.rotate(e.ang||0);ctx.font=`700 170px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.direction='rtl';ctx.fillStyle=col;ctx.fillText(e.dir==='down'?'پایین':'بالا',0,0);ctx.restore()}})}
     else if(e.t==='car'){const g=carGeo(e);ctx.save();lw(1);ctx.globalAlpha*=.55;ctx.strokeRect(-g.W/2+g.col,-g.L/2,g.W-2*g.col,g.L);ctx.beginPath();for(let i=1;i<g.nx;i++){const x=-g.W/2+g.col+i*g.bw;ctx.moveTo(x,-g.L/2);ctx.lineTo(x,g.L/2)}for(let j=1;j<g.ny;j++){const y=-g.L/2+j*5000;ctx.moveTo(-g.W/2+g.col,y);ctx.lineTo(g.W/2-g.col,y)}ctx.stroke();ctx.restore();
       for(let i=0;i<g.nx;i++)for(let j=0;j<g.ny;j++)carBody(-g.W/2+g.col+(i+.5)*g.bw,-g.L/2+(j+.5)*5000,col);
       if(g.col){ctx.fillStyle=col;ctx.fillRect(-g.W/2,-g.L/2,g.col,g.col);ctx.fillRect(g.W/2-g.col,-g.L/2,g.col,g.col)}}
@@ -129,7 +132,7 @@ function cutStroke(e,Pp){ctx.save();ctx.strokeStyle=C.acc;ctx.globalAlpha=.55;ct
 function badge(lines,wp,col){const Q=toS(wp);ctx.save();ctx.direction='rtl';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`800 14px ${FONT}`;const w1=ctx.measureText(lines[0]).width;ctx.font=`500 11px ${FONT}`;const w2=lines[1]?ctx.measureText(lines[1]).width:0,bw=Math.max(w1,w2)+20,bh=lines[1]?42:26;
   ctx.fillStyle=col||C.acc;ctx.beginPath();ctx.roundRect(Q[0]-bw/2,Q[1]-bh/2,bw,bh,8);ctx.fill();ctx.fillStyle='#fff';ctx.font=`800 14px ${FONT}`;ctx.fillText(lines[0],Q[0],Q[1]-(lines[1]?7:0));if(lines[1]){ctx.font=`500 11px ${FONT}`;ctx.globalAlpha=.9;ctx.fillText(lines[1],Q[0],Q[1]+11)}ctx.restore()}
 function wallDims(){for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const lift=e.th*s/2+3;if(e.pts.length===2){const[a,b]=e.pts,Ls=dist(toS(a),toS(b));if(Ls<56)continue;label(fmtLen(dist(a,b)),a,b,C.mute,lift,1,500)}else{const L=plen(e.pts),i=Math.floor(e.pts.length/2);label(fmtLen(L),e.pts[i-1],e.pts[i],C.mute,lift,1,500)}}}
-function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
+function draw(){if(!W)return;if(!moving&&!gripDrag)trackHit=null;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   if(opt.grid){const st=[50,100,250,500,1000,2500,5000,10000],g=st.find(v=>v*s>=14)||10000;grid(g,C.grid);grid(g*(g===250||g===2500?4:5),C.grid2)}
   const E=ents().filter(vis),col=e=>picked(e)?C.acc:C.ink;
   E.filter(e=>e.t==='axes').forEach(e=>drawAxes(e,picked(e)?C.acc:C.mute));
@@ -142,13 +145,13 @@ function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   E.filter(e=>e.t==='text').forEach(e=>drawText(e,col(e)));
   E.filter(e=>e.t==='dim').forEach(e=>drawDim(e,col(e)));
   if(opt.wallDims)wallDims();
-  drawGrips();drawPreview();drawMeasure();drawBox();
+  drawGrips();drawPreview();drawTrack();drawMeasure();drawBox();
   if(osHit)drawOsnap();else if(snapPt&&snapTool()){const Q=toS(snapPt);ctx.strokeStyle=C.acc;ctx.lineWidth=1.5;ctx.strokeRect(Q[0]-6,Q[1]-6,12,12)}
-  const ob=$('[data-act="osnap"]');if(ob)ob.classList.toggle('on',!!opt.osnap);
+  for(const k of['osnap','ortho','polar']){const ob=$(`[data-act="${k}"]`);if(ob)ob.classList.toggle('on',!!opt[k])}
   dynUI();selbarUI()}
 // selection box: dragged left to right it is a window (blue, takes what is fully inside); right to left a crossing (green, dashed, takes whatever it touches)
 function drawBox(){if(!selBox||!(selBox.moved||selBox.click))return;const[x0,y0]=selBox.a,[x1,y1]=selBox.b,cross=x1<x0,col=cross?'#16A34A':C.acc;ctx.save();ctx.fillStyle=col;ctx.globalAlpha=.08;ctx.fillRect(x0,y0,x1-x0,y1-y0);ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.setLineDash(cross?[6,4]:[]);ctx.strokeRect(x0+.5,y0+.5,x1-x0,y1-y0);ctx.restore()}
-function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys(dynLock).length?[pts[0][0]+1,pts[0][1]]:null);if(!m)return;
+function drawPreview(){const m=mouse||((ptype==='touch'||isMod())&&dynFields()&&Object.keys(dynLock).length?[pts[0][0]+1,pts[0][1]]:null);if(!m)return;
   if(isMod()&&cmd&&cmd.step==='dest'){drawCmd(dynPt(snapPt||pathPt(m)));return}const q=()=>dynPt(snapPt||pathPt(m));
   if(tool==='wall'||tool==='line'){const o=DEF[tool],pv=tool==='wall'?(Pp=>drawWall({pts:Pp,th:o.th},C.acc,.35)):(Pp=>drawLine({pts:Pp,dash:o.dash,lw:o.lw},C.acc,.8));
     if(!pts.length){if(!snapPt){const Q=toS(q());ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(Q[0],Q[1],3.5,0,7);ctx.fill()}return}
@@ -222,7 +225,15 @@ function liveReadout(){const b=$('[data-live-big]');if(!b)return;const inf=measI
 // ---------- snapping + picking ----------
 const gridSnap=p=>opt.snap?[Math.round(p[0]/50)*50,Math.round(p[1]/50)*50]:p.slice();
 function endpointSnap(p,skip){if(opt.osnap)return snapAt(p,skip?new Set([skip]):null,false);if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e)&&e!==skip)for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
-function pathPt(m){let p=gridSnap(m);const o=DEF[tool];if(pts.length&&o&&o.shape==='straight'){const a0=pts[0],dx=p[0]-a0[0],dy=p[1]-a0[1],a=Math.atan2(dy,dx),q=Math.round(a/H)*H;if(Math.abs(a-q)<.1){const L=Math.hypot(dx,dy);p=gridSnap([a0[0]+Math.round(Math.cos(q))*L,a0[1]+Math.round(Math.sin(q))*L])}}return p}
+function pathPt(m){let p=gridSnap(m);const o=DEF[tool];if(pts.length&&o&&o.shape==='straight')p=constrainDir(pts[pts.length-1],p);return p}
+// direction locks like AutoCAD: Ortho (F8, or hold Shift) keeps the direction horizontal or vertical; Polar (F10) sticks to steps of opt.polarInc degrees and shows a tracking line
+let trackHit=null,shiftDown=false;
+function constrainDir(a,p){const dx=p[0]-a[0],dy=p[1]-a[1];if(Math.hypot(dx,dy)<1)return p;const t=Math.atan2(dy,dx),ortho=!!opt.ortho!==shiftDown;let q=null;
+  if(ortho)q=Math.round(t/H)*H;else if(opt.polar){const st=(opt.polarInc||45)/R2D,r=Math.round(t/st)*st;if(Math.abs(t-r)<5/R2D)q=r}
+  if(q==null)return p;const c=ortho?Math.round(Math.cos(q)):Math.cos(q),sn=ortho?Math.round(Math.sin(q)):Math.sin(q),pr=dx*c+dy*sn,out=[a[0]+pr*c,a[1]+pr*sn];if(!ortho)trackHit={a:a.slice(),t:q,p:out};return out}
+function drawTrack(){if(!trackHit)return;const{a,t,p}=trackHit,A=toS(a),R_=(W+Hh)*2;ctx.save();ctx.strokeStyle='#16A34A';ctx.globalAlpha=.75;ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(A[0]+Math.cos(t)*R_,A[1]-Math.sin(t)*R_);ctx.stroke();ctx.restore();
+  const Q=toS(p),txt=faN(((t*R2D)%360+360)%360,0)+'° · '+fmtLen(dist(a,p));ctx.save();ctx.font=`600 11px ${FONT}`;ctx.direction='rtl';const tw=ctx.measureText(txt).width;ctx.fillStyle='#16A34A';ctx.beginPath();ctx.roundRect(Q[0]-tw-26,Q[1]-36,tw+12,20,5);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,Q[0]-20-tw/2,Q[1]-26);ctx.restore()}
+function toggleLock(k){opt[k]=!opt[k];if(opt[k])opt[k==='ortho'?'polar':'ortho']=false;trackHit=null;flash({ortho:'قفل افقی و عمودی (Ortho)',polar:'قفل زاویه‌ای (Polar)'}[k]+(opt[k]?' روشن شد.':' خاموش شد.'));savePrefs();refresh();draw()}
 function nearestWall(p){let best=null,bd=1e12;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const r=locate(e.pts,p),d=r.d-e.th/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
 // cutting works on walls, lines and shapes (a shape is cut along its outline and what is left becomes lines, like an AutoCAD polyline)
 const cuttable=e=>isPath(e)||e.t==='shape';
@@ -308,7 +319,7 @@ const faN=(n,d)=>Number(n).toLocaleString('fa-IR',{maximumFractionDigits:d,useGr
 const dynFmt=(k,v)=>k==='ang'?faN(v,1):k==='k'?faN(v,2):faN(v/UF(),{m:3,cm:1,mm:0}[opt.unit]);
 let dynSig='';
 function dynUI(){const bx=$('[data-dyn]');if(!bx)return;const F=dynFields(),foc=bx.contains(document.activeElement);
-  const tch=ptype==='touch';bx.classList.toggle('tch',tch);if(!F||(!mouse&&!foc&&!tch)){if(foc)document.activeElement.blur();bx.hidden=true;return}
+  const tch=ptype==='touch';bx.classList.toggle('tch',tch);if(!F||(!mouse&&!foc&&!tch&&!isMod())){if(foc)document.activeElement.blur();bx.hidden=true;return}
   const sig=tool+F.map(f=>f[0]+f[1]).join()+opt.unit;
   if(sig!==dynSig){dynSig=sig;bx.innerHTML='';F.forEach(([k,l])=>{const r=el('label','dyf'),inp=el('input');inp.dataset.k=k;inp.inputMode='decimal';inp.dir='ltr';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',l);
     inp.oninput=()=>{const cp=inp.selectionStart,fv=inp.value.replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[c]).replace(/\./g,'٫');if(fv!==inp.value){inp.value=fv;inp.setSelectionRange(cp,cp)}const v=parseFloat(toEn(inp.value));if(!inp.value.trim()||isNaN(v))delete dynLock[k];else dynLock[k]=k==='ang'||k==='k'?v:v*UF();r.classList.toggle('on',k in dynLock);draw()};
@@ -411,7 +422,7 @@ function cmdEnd(){cmd=null;pts=[];dynLock={};setTool('select');draw()}
 // the transform for the second point p
 function cmdXf(p){const b=cmd.base,k=cmd.k,dx=p[0]-b[0],dy=p[1]-b[1];
   if(k==='move'||k==='copy')return{p:q=>[q[0]+dx,q[1]+dy]};
-  if(k==='rotate'){const t=dynLock.ang!=null?dynLock.ang/R2D:Math.atan2(dy,dx),c=Math.cos(t),sn=Math.sin(t);return{rot:t,p:q=>[b[0]+(q[0]-b[0])*c-(q[1]-b[1])*sn,b[1]+(q[0]-b[0])*sn+(q[1]-b[1])*c]}}
+  if(k==='rotate'){let t=dynLock.ang!=null?dynLock.ang/R2D:Math.atan2(dy,dx);const c=Math.cos(t),sn=Math.sin(t);return{rot:t,p:q=>[b[0]+(q[0]-b[0])*c-(q[1]-b[1])*sn,b[1]+(q[0]-b[0])*sn+(q[1]-b[1])*c]}}
   if(k==='scale'){const f=dynLock.k??Math.max(.01,Math.hypot(dx,dy)/cmd.ref);return{k:f,p:q=>[b[0]+(q[0]-b[0])*f,b[1]+(q[1]-b[1])*f]}}
   const f=dynLock.ang!=null?dynLock.ang/R2D:Math.atan2(dy,dx),c=Math.cos(2*f),sn=Math.sin(2*f);return{mir:f,p:q=>{const x=q[0]-b[0],y=q[1]-b[1];return[b[0]+x*c+y*sn,b[1]+x*sn-y*c]}}}
 // a transformed copy of an entity; sizes follow a scale, angles follow a rotation, a mirror keeps text readable
@@ -427,6 +438,16 @@ function xformEnt(src,T){const e=JSON.parse(JSON.stringify(src));delete e.join;c
 const entSnap=e=>{const{join,...r}=e;return JSON.parse(JSON.stringify(r))};
 function entPut(e,o){for(const k in e)if(k!=='join'&&!(k in o))delete e[k];Object.assign(e,JSON.parse(JSON.stringify(o)))}
 function selBBox(L){let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;L.forEach(e=>outline(e)[0].forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}));return[x0,y0,x1,y1]}
+// quick 90° turn of the whole selection (R): one item turns about its own centre, several about the middle of the group
+const canTurn=()=>selSet.size>1||(!!sel&&sel.t!=='door'&&sel.t!=='window'&&(!!sel.c||isPath(sel)||sel.t==='hatch'||sel.t==='dim'||sel.t==='axes'));
+// the middle of a selection: an item's own centre, otherwise the middle of the group
+function selCenter(L){if(L.length===1&&L[0].c)return L[0].c.slice();const[x0,y0,x1,y1]=selBBox(L);return gridSnap([(x0+x1)/2,(y0+y1)/2])}
+// use the middle of the selection as the base point
+function cmdCenter(){if(cmd&&cmd.step==='base')cmdAct(selCenter(cmd.L),true)}
+function rotateSel(){const L=[...selSet].filter(e=>!locked.has(layOf(e)));if(!L.length)return;let c;
+  c=selCenter(L);
+  const T={rot:H,p:q=>[c[0]-(q[1]-c[1]),c[1]+(q[0]-c[0])]},old=L.map(entSnap),neu=L.map(e=>entSnap(xformEnt(e,T)));
+  commit(()=>L.forEach((e,i)=>entPut(e,neu[i])),()=>L.forEach((e,i)=>entPut(e,old[i])));refresh();draw()}
 function cmdAct(p,exact){if(!cmd||cmd.step==='pick')return;const q=exact?p.slice():dynPt(snapPt?snapPt.slice():pathPt(p));
   if(cmd.step==='base'){cmd.base=q;cmd.step='dest';pts=[q];if(cmd.k==='scale'){const[x0,y0,x1,y1]=selBBox(cmd.L);cmd.ref=Math.max(300,Math.hypot(x1-x0,y1-y0)/2)}dynLock={};refresh();draw();return}
   const k=cmd.k;if((k==='move'||k==='copy'||(k==='mirror'&&dynLock.ang==null))&&dist(q,cmd.base)<1){flash('نقطه‌ی دوم را جای دیگری بزنید.');return}

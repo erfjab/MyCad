@@ -1,4 +1,7 @@
 // ---------- left bar ----------
+// Ortho and Polar switch each other off, so their rows rebuild the pane
+function lockRow(k,lab){const r=el('div','opt',`<span>${lab}</span>`),b=el('button','sw'+(opt[k]?' on':''));b.setAttribute('aria-label',lab);b.onclick=()=>{toggleLock(k);leftUI()};r.append(b);return r}
+function polarSeg(){const r=el('div','f'),sg=el('div','seg');r.append(el('label','','گام زاویه‌ی Polar'));[15,30,45,90].forEach(v=>{const b=el('button',opt.polarInc===v?'on':'',fa(v)+'°');b.onclick=()=>{opt.polarInc=v;opt.polar=true;opt.ortho=false;savePrefs();leftUI();draw()};sg.append(b)});r.append(sg);return r}
 function leftUI(){const pop=$('[data-lpop]'),pin=pop.querySelector('.pin');$$('[data-pane]').forEach(b=>{b.classList.toggle('on',b.dataset.pane===lPane);b.classList.toggle('po',b.dataset.pane===lPane)});
   if(!lPane){pop.classList.add('shut');return}const keep=pop.dataset.key===lPane?pin.scrollTop:0;pop.dataset.key=lPane;pin.innerHTML='';pop.querySelector('.ph').innerHTML='';
   const titles={file:['فایل','پروژه‌ها در همین مرورگر ذخیره می‌شوند'],floors:['طبقات',`${fa(P.floors.length)} طبقه در این پروژه`],layers:['لایه‌ها',P.imported?`${fa(P.imported.layers.length)} لایه از فایل اصلی`:'نمایش، پنهان و قفل گروه‌ها'],view:['نمایش','شبکه، چسبندگی، بزرگ‌نمایی، رنگ']};
@@ -20,20 +23,20 @@ function leftUI(){const pop=$('[data-lpop]'),pin=pop.querySelector('.pin');$$('[
       const lk=el('button','ic'+(locked.has(k)?' act':''),svg(locked.has(k)?'lock':'unlock'));lk.title=(locked.has(k)?'باز کردن قفل ':'قفل ')+LN[k];lk.onclick=()=>{locked.has(k)?locked.delete(k):locked.add(k);setSel([...selSet].filter(e=>layOf(e)!==k));refresh();draw()};
       r.append(eye,lk);list.append(r)}sec.append(list)}
   if(lPane==='view'){const sw=(k,lab)=>{const r=el('div','opt',`<span>${lab}</span>`),b=el('button','sw'+(opt[k]?' on':''));b.setAttribute('aria-label',lab);b.onclick=()=>{opt[k]=!opt[k];b.classList.toggle('on',opt[k]);draw();if(tool==='measure')rightUI()};r.append(b);return r};
-    sec.append(sw('grid','شبکه'),sw('osnap','چسبیدن به المان‌ها (گوشه، سر، وسط، لبه) · F3'),sw('snap','چسبیدن به شبکه'),sw('wallDims','طول دیوارها روی نقشه'),unitSeg());
+    sec.append(sw('grid','شبکه'),sw('osnap','چسبیدن به المان‌ها (گوشه، سر، وسط، لبه) · F3'),lockRow('ortho','قفل افقی و عمودی (Ortho) · F8'),lockRow('polar','قفل زاویه‌ای (Polar) · F10'),polarSeg(),sw('snap','چسبیدن به شبکه'),sw('wallDims','طول دیوارها روی نقشه'),unitSeg());
     const z=el('div','opt','<span>بزرگ‌نمایی</span>'),zb=el('span','zoom'),zo=el('button','ic',svg('minus')),zv=el('span','',fa(Math.round(s/s0*100))+'٪'),zi=el('button','ic',svg('plus')),zf=el('button','ic',svg('fit'));zv.dataset.zoom='';zo.title='کوچک‌نمایی';zi.title='بزرگ‌نمایی';zf.title='کل نقشه';
     zo.onclick=()=>zoomAt(W/2,Hh/2,.8);zi.onclick=()=>zoomAt(W/2,Hh/2,1.25);zf.onclick=()=>{fit();draw();zv.textContent='۱۰۰٪'};zb.append(zi,zv,zo,zf);z.append(zb);sec.append(z);
     const m=el('div','f wide','<label>رنگ‌بندی</label>'),sg=el('div','seg');[['light','آبی و سفید'],['dark','آبی و مشکی']].forEach(([v,l])=>{const b=el('button',(app.dataset.mode||'light')===v?'on':'',l);b.onclick=()=>{app.dataset.mode=v;readColors();refresh();draw();savePrefs()};sg.append(b)});m.append(sg);sec.append(m)}
   pop.classList.remove('shut');pin.scrollTop=keep;place(pop,$(`[data-pane="${lPane}"]`),'l');fades(pop)}
 function loadProject(pr){P=pr;saved=true;clearTimeout(saveT);fl=0;setSel([]);pts=[];meas=null;cutA=null;chainStart=null;selBox=null;dynLock={};if(mob())lPane=null;computeJoins();fit();refresh();draw()}
 $$('[data-pane]').forEach(b=>b.addEventListener('click',()=>{lPane=lPane===b.dataset.pane?null:b.dataset.pane;if(lPane&&mob())rOpen=false;leftUI();rightUI()}));
-$$('[data-act]').forEach(b=>b.addEventListener('click',()=>({undo,redo,paste,osnap:toggleOsnap})[b.dataset.act]()));
+$$('[data-act]').forEach(b=>b.addEventListener('click',()=>({undo,redo,paste,osnap:toggleOsnap,ortho:()=>toggleLock('ortho'),polar:()=>toggleLock('polar')})[b.dataset.act]()));
 
 function syncBar(){$$('[data-tools] .ib').forEach(b=>{const i=+b.dataset.group,k=gCur[i];b.innerHTML=svg(k);b.dataset.tool=k;b.dataset.tip=(GNAME[i]?GNAME[i]+'، ':'')+TOOLS[k][0]+'  '+TOOLS[k][1];b.setAttribute('aria-label',TOOLS[k][0])})}
 // the modify bar, like AutoCAD's Modify panel
-const MODB=[['move','move','جابه‌جایی · Shift M'],['copy','copy','کپی · Shift C'],['rotate','rotate','چرخش · Shift R'],['mirror','flip','قرینه · Shift I'],['scale','scale','مقیاس · Shift S'],0,['trim','cut','برش و حذف تکه · X'],['erase','trash','حذف · Delete']];
+const MODB=[['select','select','انتخاب · V'],0,['move','move','جابه‌جایی · Shift M'],['copy','copy','کپی · Shift C'],['rotate','rotate','چرخش به هر زاویه · Shift R'],['mirror','flip','قرینه · Shift I'],['scale','scale','مقیاس · Shift S'],0,['trim','cut','برش و حذف تکه · X'],['erase','trash','حذف · Delete']];
 function modsInit(){const mb=$('[data-mods]');MODB.forEach(m=>{if(!m){mb.append(document.createElement('hr'));return}const b=el('button','ib',svg(m[1]));b.dataset.mod=m[0];b.dataset.tip=m[2];b.setAttribute('aria-label',m[2].split(' · ')[0]);
-  b.onclick=()=>{if(m[0]==='trim'){DEF.cut.mode='trim';if(tool==='cut')refresh();else setTool('cut');return}if(tool===m[0])esc();else setTool(m[0])};mb.append(b)})}
+  b.onclick=()=>{if(m[0]==='select'){if(tool!=='select')setTool('select');return}if(m[0]==='trim'){DEF.cut.mode='trim';if(tool==='cut')refresh();else setTool('cut');return}if(tool===m[0])esc();else setTool(m[0])};mb.append(b)})}
 function toolsInit(){modsInit();const bar=$('[data-tools]');GROUPS.forEach((g,i)=>{if(GBREAK.includes(i))bar.append(document.createElement('hr'));const b=el('button','ib'+(g.length>1?' grp':''));b.dataset.group=i;b.onclick=()=>setTool(gCur[i]);bar.append(b)});syncBar();
   bar.addEventListener('scroll',()=>{const pop=$('[data-rpop]');if(!pop.classList.contains('shut')){const a=$('[data-tools] .ib.po');if(a)place(pop,a,'r')}},{passive:true})}
 function refresh(){rightUI();leftUI();$('[data-act="paste"]').hidden=!clip;$$('[data-mods] .ib').forEach(b=>b.classList.toggle('on',b.dataset.mod===tool||(b.dataset.mod==='trim'&&tool==='cut')))}
