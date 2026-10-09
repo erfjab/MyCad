@@ -5,7 +5,7 @@ const LIGHT={bg:'#FFFFFF',ink:'#111111',mute:'#707070',acc:'#2563EB',grid:'#F3F3
 function sheetGeom(){let[W_,H_]=PAPER[EXP.paper];if(EXP.orient==='port')[W_,H_]=[H_,W_];const aw=W_-20,ah=H_-20-(EXP.tb?30:0),[x0,y0,x1,y1]=bbox(),bw=x1-x0,bh=y1-y0;
   const N=EXP.scale||Math.ceil(Math.max(bw/aw,bh/ah)*1.04);return{W:W_,H:H_,aw,ah,N,fits:bw/N<=aw&&bh/N<=ah,bb:[x0,y0,x1,y1],pw:bw/N,ph:bh/N}}
 function drawPlan(lite){const E=ents().filter(vis).filter(e=>!lite||!['dim','text'].includes(e.t));
-  E.filter(e=>e.t==='hatch').forEach(e=>drawHatch(e,C.ink,null));E.filter(e=>e.t==='furn').forEach(e=>drawItem(e,C.furn));E.filter(e=>e.t==='wall').forEach(e=>drawWall(e,C.ink));
+  E.filter(e=>e.t==='axes').forEach(e=>drawAxes(e,C.ink));E.filter(e=>e.t==='hatch').forEach(e=>drawHatch(e,C.ink,null));E.filter(e=>e.t==='furn').forEach(e=>drawItem(e,C.furn));E.filter(e=>e.t==='wall').forEach(e=>drawWall(e,C.ink));
   E.filter(e=>e.t==='line').forEach(e=>drawLine(e,C.ink));E.filter(e=>e.t==='shape').forEach(e=>drawShape(e,C.ink));E.filter(e=>['door','window','elevator','stairs','car','column'].includes(e.t)).forEach(e=>drawItem(e,C.ink));
   E.filter(e=>e.t==='text').forEach(e=>drawText(e,C.ink));E.filter(e=>e.t==='dim').forEach(e=>drawDim(e,C.ink))}
 function drawSheet(g,k,lite){const G=sheetGeom(),sv=C;C={...LIGHT};try{const{W:Wp,H:Hp,N}=G,mm=v=>v*k;g.fillStyle='#fff';g.fillRect(0,0,mm(Wp),mm(Hp));
@@ -59,7 +59,7 @@ function dxfCollect(){const K=25,out=[];let lay='0';const R={lineWidth:1,fillSty
     strokeRect(x,y,w,h){const sp=path,sc_=cur;path=[];cur=null;R.rect(x,y,w,h);emit(false);path=sp;cur=sc_},
     measureText(t){const z=parseFloat((/([\d.]+)px/.exec(R.font)||[0,10])[1]);return{width:String(t).length*z*.5}},
     fillText(str,x,y){if(R.fillStyle===C.bg)return;const z=parseFloat((/([\d.]+)px/.exec(R.font)||[0,10])[1]),sc=Math.sqrt(Math.abs(m[0]*m[3]-m[1]*m[2]))*K;out.push({t:'tx',lay,p:T(x,y),h:z*sc*.72,rot:-Math.atan2(m[1],m[0])*R2D,str:String(str),al:R.textAlign})}});
-  const sv=[C,mouse,ghost];C={...LIGHT};mouse=null;ghost=null;const D={walls:'A-WALL',open:'A-DOOR-WIND',circ:'A-STAIR-LIFT',park:'A-PARKING',struct:'S-COLUMN',furn:'A-FURNITURE',anno:'A-ANNO',dims:'A-DIMS',fill:'A-HATCH'};
+  const sv=[C,mouse,ghost];C={...LIGHT};mouse=null;ghost=null;const D={walls:'A-WALL',open:'A-DOOR-WIND',circ:'A-STAIR-LIFT',park:'A-PARKING',struct:'S-COLUMN',axes:'S-GRID',furn:'A-FURNITURE',anno:'A-ANNO',dims:'A-DIMS',fill:'A-HATCH'};
   try{withView(R,1e6,1e6,1/K,0,0,()=>{for(const e of ents()){if(!vis(e))continue;lay=e.lay||D[LAYER_OF[e.t]]||'0';if(e.t==='hatch'){out.push({t:'pl',lay,pts:e.poly.map(p=>p.slice()),closed:true,w:0});continue}
       if(e.t==='wall'){const L=plen(e.pts),cuts=ents().filter(o=>(o.t==='door'||o.t==='window')&&vis(o)).map(o=>{const r=locate(e.pts,o.c);return r.d<e.th/2+20?[Math.max(0,r.s-o.w/2),Math.min(L,r.s+o.w/2)]:null}).filter(Boolean).sort((a,b)=>a[0]-b[0]);
         if(cuts.length){let s0=0;const parts=[];cuts.forEach(([a,b])=>{if(a-s0>1)parts.push([s0,a]);s0=Math.max(s0,b)});if(L-s0>1)parts.push([s0,L]);parts.forEach(([a,b])=>drawWall({...e,closed:false,join:null,pts:slice(e.pts,a,b)},C.ink));continue}}
@@ -67,7 +67,7 @@ function dxfCollect(){const K=25,out=[];let lay='0';const R={lineWidth:1,fillSty
   return{out,layers:D}}
 function dxfText(){const{out,layers}=dxfCollect(),L=[],g=(c,v)=>L.push(c,typeof v==='number'?(Math.round(v*1000)/1000).toString():v);
   const enc=t=>{const ar=/[؀-ۿ]/.test(t);if(ar){t=[...t].reverse().join('').replace(/[۰-۹0-9٫٬.,/]+/g,r=>[...r].reverse().join(''))}return t.replace(/[^\x20-\x7e]/g,c=>'\\U+'+c.charCodeAt(0).toString(16).toUpperCase().padStart(4,'0'))};
-  const COL={'A-WALL':7,'A-DOOR-WIND':4,'A-STAIR-LIFT':3,'A-PARKING':8,'S-COLUMN':1,'A-FURNITURE':8,'A-ANNO':2,'A-DIMS':6,'A-HATCH':9};
+  const COL={'A-WALL':7,'A-DOOR-WIND':4,'A-STAIR-LIFT':3,'A-PARKING':8,'S-COLUMN':1,'S-GRID':5,'A-FURNITURE':8,'A-ANNO':2,'A-DIMS':6,'A-HATCH':9};
   g(0,'SECTION');g(2,'HEADER');g(9,'$ACADVER');g(1,'AC1009');g(9,'$INSUNITS');g(70,4);g(0,'ENDSEC');
   g(0,'SECTION');g(2,'TABLES');g(0,'TABLE');g(2,'LTYPE');g(70,1);g(0,'LTYPE');g(2,'CONTINUOUS');g(70,0);g(3,'Solid line');g(72,65);g(73,0);g(40,0);g(0,'ENDTAB');
   const names=[...new Set([...Object.values(layers),...out.map(o=>o.lay)])].filter(n=>n&&n!=='0');g(0,'TABLE');g(2,'LAYER');g(70,names.length+1);['0',...names].forEach(n=>{g(0,'LAYER');g(2,n);g(70,0);g(62,COL[n]||7);g(6,'CONTINUOUS')});g(0,'ENDTAB');

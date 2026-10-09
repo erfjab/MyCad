@@ -20,21 +20,25 @@ function leftUI(){const pop=$('[data-lpop]'),pin=pop.querySelector('.pin');$$('[
       const lk=el('button','ic'+(locked.has(k)?' act':''),svg(locked.has(k)?'lock':'unlock'));lk.title=(locked.has(k)?'باز کردن قفل ':'قفل ')+LN[k];lk.onclick=()=>{locked.has(k)?locked.delete(k):locked.add(k);setSel([...selSet].filter(e=>layOf(e)!==k));refresh();draw()};
       r.append(eye,lk);list.append(r)}sec.append(list)}
   if(lPane==='view'){const sw=(k,lab)=>{const r=el('div','opt',`<span>${lab}</span>`),b=el('button','sw'+(opt[k]?' on':''));b.setAttribute('aria-label',lab);b.onclick=()=>{opt[k]=!opt[k];b.classList.toggle('on',opt[k]);draw();if(tool==='measure')rightUI()};r.append(b);return r};
-    sec.append(sw('grid','شبکه'),sw('snap','چسبیدن به سر دیوارها و شبکه'),sw('wallDims','طول دیوارها روی نقشه'),unitSeg());
+    sec.append(sw('grid','شبکه'),sw('osnap','چسبیدن به المان‌ها (گوشه، سر، وسط، لبه) · F3'),sw('snap','چسبیدن به شبکه'),sw('wallDims','طول دیوارها روی نقشه'),unitSeg());
     const z=el('div','opt','<span>بزرگ‌نمایی</span>'),zb=el('span','zoom'),zo=el('button','ic',svg('minus')),zv=el('span','',fa(Math.round(s/s0*100))+'٪'),zi=el('button','ic',svg('plus')),zf=el('button','ic',svg('fit'));zv.dataset.zoom='';zo.title='کوچک‌نمایی';zi.title='بزرگ‌نمایی';zf.title='کل نقشه';
     zo.onclick=()=>zoomAt(W/2,Hh/2,.8);zi.onclick=()=>zoomAt(W/2,Hh/2,1.25);zf.onclick=()=>{fit();draw();zv.textContent='۱۰۰٪'};zb.append(zi,zv,zo,zf);z.append(zb);sec.append(z);
     const m=el('div','f wide','<label>رنگ‌بندی</label>'),sg=el('div','seg');[['light','آبی و سفید'],['dark','آبی و مشکی']].forEach(([v,l])=>{const b=el('button',(app.dataset.mode||'light')===v?'on':'',l);b.onclick=()=>{app.dataset.mode=v;readColors();refresh();draw();savePrefs()};sg.append(b)});m.append(sg);sec.append(m)}
   pop.classList.remove('shut');pin.scrollTop=keep;place(pop,$(`[data-pane="${lPane}"]`),'l');fades(pop)}
 function loadProject(pr){P=pr;saved=true;clearTimeout(saveT);fl=0;setSel([]);pts=[];meas=null;cutA=null;chainStart=null;selBox=null;dynLock={};if(mob())lPane=null;computeJoins();fit();refresh();draw()}
 $$('[data-pane]').forEach(b=>b.addEventListener('click',()=>{lPane=lPane===b.dataset.pane?null:b.dataset.pane;if(lPane&&mob())rOpen=false;leftUI();rightUI()}));
-$$('[data-act]').forEach(b=>b.addEventListener('click',()=>({undo,redo,paste})[b.dataset.act]()));
+$$('[data-act]').forEach(b=>b.addEventListener('click',()=>({undo,redo,paste,osnap:toggleOsnap})[b.dataset.act]()));
 
 function syncBar(){$$('[data-tools] .ib').forEach(b=>{const i=+b.dataset.group,k=gCur[i];b.innerHTML=svg(k);b.dataset.tool=k;b.dataset.tip=(GNAME[i]?GNAME[i]+'، ':'')+TOOLS[k][0]+'  '+TOOLS[k][1];b.setAttribute('aria-label',TOOLS[k][0])})}
-function toolsInit(){const bar=$('[data-tools]');GROUPS.forEach((g,i)=>{if(GBREAK.includes(i))bar.append(document.createElement('hr'));const b=el('button','ib'+(g.length>1?' grp':''));b.dataset.group=i;b.onclick=()=>setTool(gCur[i]);bar.append(b)});syncBar();
+// the modify bar, like AutoCAD's Modify panel
+const MODB=[['move','move','جابه‌جایی · Shift M'],['copy','copy','کپی · Shift C'],['rotate','rotate','چرخش · Shift R'],['mirror','flip','قرینه · Shift I'],['scale','scale','مقیاس · Shift S'],0,['trim','cut','برش و حذف تکه · X'],['erase','trash','حذف · Delete']];
+function modsInit(){const mb=$('[data-mods]');MODB.forEach(m=>{if(!m){mb.append(document.createElement('hr'));return}const b=el('button','ib',svg(m[1]));b.dataset.mod=m[0];b.dataset.tip=m[2];b.setAttribute('aria-label',m[2].split(' · ')[0]);
+  b.onclick=()=>{if(m[0]==='trim'){DEF.cut.mode='trim';if(tool==='cut')refresh();else setTool('cut');return}if(tool===m[0])esc();else setTool(m[0])};mb.append(b)})}
+function toolsInit(){modsInit();const bar=$('[data-tools]');GROUPS.forEach((g,i)=>{if(GBREAK.includes(i))bar.append(document.createElement('hr'));const b=el('button','ib'+(g.length>1?' grp':''));b.dataset.group=i;b.onclick=()=>setTool(gCur[i]);bar.append(b)});syncBar();
   bar.addEventListener('scroll',()=>{const pop=$('[data-rpop]');if(!pop.classList.contains('shut')){const a=$('[data-tools] .ib.po');if(a)place(pop,a,'r')}},{passive:true})}
-function refresh(){rightUI();leftUI();$('[data-act="paste"]').hidden=!clip}
-function setTool(t){if(t===tool&&(t!=='select'||selSet.size)){rOpen=!rOpen;if(rOpen&&mob())lPane=null;refresh();return}
-  if(drafting())finishDraft();tool=t;gCur[gOf(t)]=t;syncBar();pvKey=null;pts=[];chainStart=null;cutA=null;snapPt=null;ghost=null;meas=null;selBox=null;fence=null;dynLock={};if(t!=='select')setSel([]);rOpen=t!=='select';if(mob())lPane=null;canvas.style.cursor=t==='select'?'default':'crosshair';updateGhost();refresh();draw()}
+function refresh(){rightUI();leftUI();$('[data-act="paste"]').hidden=!clip;$$('[data-mods] .ib').forEach(b=>b.classList.toggle('on',b.dataset.mod===tool||(b.dataset.mod==='trim'&&tool==='cut')))}
+function setTool(t){if(t===tool&&MOD.includes(t)){esc();return}if(t===tool&&(t!=='select'||selSet.size)){rOpen=!rOpen;if(rOpen&&mob())lPane=null;refresh();return}
+  if(drafting())finishDraft();cmd=null;osHit=null;tool=t;if(gOf(t)>=0)gCur[gOf(t)]=t;syncBar();pvKey=null;pts=[];chainStart=null;cutA=null;snapPt=null;ghost=null;meas=null;selBox=null;fence=null;dynLock={};if(t!=='select'&&!MOD.includes(t))setSel([]);rOpen=t!=='select'&&!MOD.includes(t);if(mob())lPane=null;canvas.style.cursor=t==='select'?'default':'crosshair';updateGhost();refresh();draw();if(MOD.includes(t))cmdStart()}
 // Esc drops everything at once (drawing in progress, selection box, measurement, selection) and goes back to the select tool; pressed again with nothing going on, it closes the cards
 function esc(){fence=null;if(gripDrag){unmove();draw();return}const busy=selBox||drafting()||meas||selSet.size||tool!=='select';dynLock={};selBox=null;pts=[];chainStart=null;cutA=null;meas=null;setSel([]);
   if(busy){if(tool!=='select')setTool('select');rOpen=false}else{rOpen=false;lPane=null}refresh();draw()}

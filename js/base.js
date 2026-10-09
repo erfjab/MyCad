@@ -41,6 +41,10 @@ const ICONS={
   edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   paste:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
   more:'<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>',
+  move:'<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>',
+  scale:'<rect x="3" y="12" width="9" height="9"/><path d="M12 3h9v9" stroke-dasharray="2 2"/><path d="M10 14l9-9M14 5h5v5"/>',
+  magnet:'<path d="M5 3h5v9a2 2 0 004 0V3h5v9a7 7 0 01-14 0z"/><path d="M5 8h5M14 8h5"/>',
+  axes:'<path d="M8 7v14M16 7v14M3 12h18M3 18h18" stroke-dasharray="3 2"/><circle cx="8" cy="4.5" r="2.2"/><circle cx="16" cy="4.5" r="2.2"/>',
   pin:'<path d="M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>'
 };
 const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
@@ -53,6 +57,6 @@ const FONT='Vazirmatn, Tahoma, sans-serif';
 const fa=(n,d=0,g=true)=>Number(n).toLocaleString('fa-IR',{minimumFractionDigits:d,maximumFractionDigits:d,useGrouping:g});
 const toEn=v=>String(v).replace(/[۰-۹]/g,c=>c.charCodeAt(0)-1776).replace(/[٠-٩]/g,c=>c.charCodeAt(0)-1632).replace(/[٬,\s]/g,'').replace(/٫/g,'.');
 const cm=mm=>{const v=Math.round(mm)/10;return fa(v,Number.isInteger(v)?0:1,false)};
-const opt={grid:true,snap:true,wallDims:false,unit:'m'};
+const opt={grid:true,snap:true,osnap:true,wallDims:false,unit:'m'};
 const fmtLen=mm=>opt.unit==='m'?fa(mm/1000,2)+' م':opt.unit==='cm'?cm(mm)+' سانت':fa(Math.round(mm))+' میلی';
 const fmtArea=a=>fa(a/1e6,2)+' متر مربع';

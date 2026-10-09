@@ -22,7 +22,7 @@ const dimPts=e=>{const L=dist(e.a,e.b)||1,n=[-(e.b[1]-e.a[1])/L,(e.b[0]-e.a[0])/
 // ---------- view ----------
 function bbox(){if(ents().length>2000){const X=[],Y=[];ents().forEach(e=>{const p=(e.pts||e.poly||[])[0]||e.c;if(p){X.push(p[0]);Y.push(p[1])}});X.sort((a,b)=>a-b);Y.sort((a,b)=>a-b);const q=(A,t)=>A[Math.floor((A.length-1)*t)],x0=q(X,.01),x1=q(X,.99),y0=q(Y,.01),y1=q(Y,.99),mx=(x1-x0)*.04,my=(y1-y0)*.04;return[x0-mx,y0-my,x1+mx,y1+my]}
   let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;const ad=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)};
-  ents().forEach(e=>{(e.pts||e.poly||[]).forEach(p=>ad(...p));if(e.t==='dim'){const[A,B]=dimPts(e);ad(...A);ad(...B)}if(e.c&&e.t!=='door'&&e.t!=='window'){if(e.t==='text'){ad(e.c[0],e.c[1]);return}const[w,d]=dims(e),r=Math.hypot(w,d)/2;ad(e.c[0]-r,e.c[1]-r);ad(e.c[0]+r,e.c[1]+r)}});
+  ents().forEach(e=>{if(e.t==='axes'){outline(e)[0].forEach(p=>ad(...p));return}(e.pts||e.poly||[]).forEach(p=>ad(...p));if(e.t==='dim'){const[A,B]=dimPts(e);ad(...A);ad(...B)}if(e.c&&e.t!=='door'&&e.t!=='window'){if(e.t==='text'){ad(e.c[0],e.c[1]);return}const[w,d]=dims(e),r=Math.hypot(w,d)/2;ad(e.c[0]-r,e.c[1]-r);ad(e.c[0]+r,e.c[1]+r)}});
   return x0>x1?[0,0,16000,12000]:[x0,y0,x1,y1]}
 function fit(){const[x0,y0,x1,y1]=bbox(),m=mob(),pl=m?14:(lPane?400:84),pr=m?14:(rOpen?400:84),pt=m?62:28,pb=m?80:28,w=W-pl-pr,h=Hh-pt-pb;s=Math.min(w/(x1-x0),h/(y1-y0));s0=s;ox=pl+w/2-(x0+x1)/2*s;oy=pt+h/2+(y0+y1)/2*s}
 function zoomAt(x,y,f){const w=toW(x,y);s=Math.max(.004,Math.min(5,s*f));ox=x-w[0]*s;oy=y+w[1]*s;draw();const z=$('[data-zoom]');if(z)z.textContent=fa(Math.round(s/s0*100))+'٪'}
@@ -132,6 +132,7 @@ function wallDims(){for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;con
 function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   if(opt.grid){const st=[50,100,250,500,1000,2500,5000,10000],g=st.find(v=>v*s>=14)||10000;grid(g,C.grid);grid(g*(g===250||g===2500?4:5),C.grid2)}
   const E=ents().filter(vis),col=e=>picked(e)?C.acc:C.ink;
+  E.filter(e=>e.t==='axes').forEach(e=>drawAxes(e,picked(e)?C.acc:C.mute));
   E.filter(e=>e.t==='hatch').forEach(e=>drawHatch(e,C.ink,picked(e)?C.acc:null));
   E.filter(e=>e.t==='furn').forEach(e=>drawItem(e,picked(e)?C.acc:C.furn));
   E.filter(e=>e.t==='wall').forEach(e=>drawWall(e,col(e)));
@@ -142,11 +143,13 @@ function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   E.filter(e=>e.t==='dim').forEach(e=>drawDim(e,col(e)));
   if(opt.wallDims)wallDims();
   drawGrips();drawPreview();drawMeasure();drawBox();
-  if(snapPt&&['wall','line','measure','hatch','shape'].includes(tool)){const Q=toS(snapPt);ctx.strokeStyle=C.acc;ctx.lineWidth=1.5;ctx.strokeRect(Q[0]-6,Q[1]-6,12,12)}
+  if(osHit)drawOsnap();else if(snapPt&&snapTool()){const Q=toS(snapPt);ctx.strokeStyle=C.acc;ctx.lineWidth=1.5;ctx.strokeRect(Q[0]-6,Q[1]-6,12,12)}
+  const ob=$('[data-act="osnap"]');if(ob)ob.classList.toggle('on',!!opt.osnap);
   dynUI();selbarUI()}
 // selection box: dragged left to right it is a window (blue, takes what is fully inside); right to left a crossing (green, dashed, takes whatever it touches)
 function drawBox(){if(!selBox||!(selBox.moved||selBox.click))return;const[x0,y0]=selBox.a,[x1,y1]=selBox.b,cross=x1<x0,col=cross?'#16A34A':C.acc;ctx.save();ctx.fillStyle=col;ctx.globalAlpha=.08;ctx.fillRect(x0,y0,x1-x0,y1-y0);ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.setLineDash(cross?[6,4]:[]);ctx.strokeRect(x0+.5,y0+.5,x1-x0,y1-y0);ctx.restore()}
-function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys(dynLock).length?[pts[0][0]+1,pts[0][1]]:null);if(!m)return;const q=()=>dynPt(snapPt||pathPt(m));
+function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys(dynLock).length?[pts[0][0]+1,pts[0][1]]:null);if(!m)return;
+  if(isMod()&&cmd&&cmd.step==='dest'){drawCmd(dynPt(snapPt||pathPt(m)));return}const q=()=>dynPt(snapPt||pathPt(m));
   if(tool==='wall'||tool==='line'){const o=DEF[tool],pv=tool==='wall'?(Pp=>drawWall({pts:Pp,th:o.th},C.acc,.35)):(Pp=>drawLine({pts:Pp,dash:o.dash,lw:o.lw},C.acc,.8));
     if(!pts.length){if(!snapPt){const Q=toS(q());ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(Q[0],Q[1],3.5,0,7);ctx.fill()}return}
     const b=q();
@@ -171,8 +174,30 @@ function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys
     const M=shapeMeasure(sh);badge([o.kind==='circle'?'قطر '+fmtLen(sh.w):o.kind==='poly'?'قطر '+fmtLen(sh.w)+'، '+fa(o.sides)+' ضلع':o.kind==='square'?'ضلع '+fmtLen(sh.w):fmtLen(sh.w)+' × '+fmtLen(sh.d),fmtArea(M.A)],sh.c)}
   else if(tool==='measure'&&DEF.measure.mode==='room'&&(!meas||meas.fin===true&&meas.mode!=='room')){const Pp=roomAt(m);if(Pp){ctx.save();pathOf(Pp);ctx.closePath();ctx.strokeStyle=C.acc;ctx.setLineDash([5,4]);ctx.lineWidth=1.3;ctx.stroke();ctx.restore()}}
   if(tool==='stairs'&&pts.length){const A=toS(pts[0]);ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(A[0],A[1],4.5,0,7);ctx.fill()}
-  if(ghost)drawItem(ghost,C.acc,ghost.ok===false?.3:.85);
+  if(ghost)(ghost.t==='axes'?drawAxes:drawItem)(ghost,C.acc,ghost.ok===false?.3:.85);
   if(tool==='stairs'&&pts.length&&ghost&&mouse){const G=stairGeo(ghost),Q=toS(mouse);badge([`${fmtLen(G.W)} × ${fmtLen(G.D)}`,`${fa(G.n)} پله، هر پله ${cm(G.R)} سانت`],toW(Q[0],Q[1]-44))}}
+
+// ---------- structural axes: a grid of axis lines with named bubbles, spans typed in the card, columns at the crossings ----------
+// e.o is the first crossing (axis 1 / A), e.xs and e.ys the spans; e.sy is -1 after a mirror
+function axesGeo(e){const X=[0],Y=[0];(e.xs||[]).forEach(v=>X.push(X[X.length-1]+v));(e.ys||[]).forEach(v=>Y.push(Y[Y.length-1]+v));const sy=e.sy||1,c=Math.cos(e.ang||0),sn=Math.sin(e.ang||0);
+  return{X,Y,W:X[X.length-1],Hy:Y[Y.length-1],T:([x,y])=>[e.o[0]+x*c-y*sy*sn,e.o[1]+x*sn+y*sy*c]}}
+const AXL=i=>{let t='';i++;while(i>0){i--;t=String.fromCharCode(65+i%26)+t;i=Math.floor(i/26)}return t};
+const axName=(e,dir,i)=>((e.lab||'n')==='n')===(dir==='x')?fa(i+1):AXL(i);
+function drawAxes(e,col,alpha){const g=axesGeo(e),x=e.ext||1500,r=(e.bub||700)/2,two=(e.ends||2)===2,px=r*s;ctx.save();ctx.globalAlpha=alpha||1;
+  const ln=(a,b)=>{const A=toS(g.T(a)),B=toS(g.T(b));ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1])};
+  ctx.strokeStyle=col;ctx.lineWidth=1;ctx.setLineDash([16,5,3,5]);ctx.beginPath();g.X.forEach(a=>ln([a,-x],[a,g.Hy+x]));g.Y.forEach(b=>ln([-x,b],[g.W+x,b]));ctx.stroke();ctx.setLineDash([]);
+  const bub=(p,t)=>{const Q=toS(g.T(p));ctx.fillStyle=C.bg;ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(Q[0],Q[1],px,0,TAU);ctx.fill();ctx.stroke();
+    if(px>5){ctx.fillStyle=col;ctx.font=`700 ${px*1.05}px ${FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,Q[0],Q[1]+px*.06)}};
+  g.X.forEach((a,i)=>{const t=axName(e,'x',i);bub([a,-x-r],t);if(two)bub([a,g.Hy+x+r],t)});g.Y.forEach((b,i)=>{const t=axName(e,'y',i);bub([-x-r,b],t);if(two)bub([g.W+x+r,b],t)});ctx.restore();
+  if(e.dims){const o=-x*.45;for(let i=1;i<g.X.length;i++)drawDim({a:g.T([g.X[i-1],o]),b:g.T([g.X[i],o]),off:0},col,alpha);for(let i=1;i<g.Y.length;i++)drawDim({a:g.T([o,g.Y[i]]),b:g.T([o,g.Y[i-1]]),off:0},col,alpha)}}
+function axesHit(e,p,tol){const g=axesGeo(e),x=e.ext||1500,r=(e.bub||700)/2;if(g.X.some(a=>segD(p,g.T([a,-x-2*r]),g.T([a,g.Hy+x+2*r]))<=tol))return true;return g.Y.some(b=>segD(p,g.T([-x-2*r,b]),g.T([g.W+x+2*r,b]))<=tol)}
+// a column of the current column size on every crossing that has none yet
+function axesColumns(e){const g=axesGeo(e),have=ents().filter(o=>o.t==='column'),add=[];g.X.forEach(a=>g.Y.forEach(b=>{const p=g.T([a,b]);if(!have.some(o=>dist(o.c,p)<50))add.push({t:'column',...DEF.column,c:p,ang:e.ang||0})}));
+  if(!add.length){flash('روی همه‌ی تقاطع‌ها ستون هست.');return}addMany(add);flash(fa(add.length)+' ستون گذاشته شد.');draw()}
+// spans typed as "4.2, 3.6, 5" or "3*4" in the display unit
+const spansTxt=a=>(a||[]).map(v=>faN(v/UF(),3)).join('، ');
+function parseSpans(t){const out=[];for(const tok of String(t).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/٫/g,'.').split(/[,،;\s]+/).filter(Boolean)){
+  const m=/^(\d+)\s*[*x×]\s*([\d.]+)$/i.exec(tok),n=m?+m[1]:1,v=parseFloat(m?m[2]:tok);if(!(v>0)||!(n>0)||n>60)return null;for(let i=0;i<n;i++)out.push(Math.round(v*UF()))}return out.length?out:null}
 
 // ---------- measuring ----------
 function measPts(){if(!meas)return[];const live=(!meas.fin&&mouse)?(snapPt||gridSnap(mouse)):null;return live&&meas.mode!=='room'?[...meas.pts,live]:meas.pts}
@@ -196,7 +221,7 @@ function liveReadout(){const b=$('[data-live-big]');if(!b)return;const inf=measI
 
 // ---------- snapping + picking ----------
 const gridSnap=p=>opt.snap?[Math.round(p[0]/50)*50,Math.round(p[1]/50)*50]:p.slice();
-function endpointSnap(p,skip){if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e)&&e!==skip)for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
+function endpointSnap(p,skip){if(opt.osnap)return snapAt(p,skip?new Set([skip]):null,false);if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e)&&e!==skip)for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
 function pathPt(m){let p=gridSnap(m);const o=DEF[tool];if(pts.length&&o&&o.shape==='straight'){const a0=pts[0],dx=p[0]-a0[0],dy=p[1]-a0[1],a=Math.atan2(dy,dx),q=Math.round(a/H)*H;if(Math.abs(a-q)<.1){const L=Math.hypot(dx,dy);p=gridSnap([a0[0]+Math.round(Math.cos(q))*L,a0[1]+Math.round(Math.sin(q))*L])}}return p}
 function nearestWall(p){let best=null,bd=1e12;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const r=locate(e.pts,p),d=r.d-e.th/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
 // cutting works on walls, lines and shapes (a shape is cut along its outline and what is left becomes lines, like an AutoCAD polyline)
@@ -213,6 +238,7 @@ function hit(p){const tol=tolPx()/s*.6,ok=e=>vis(e)&&!locked.has(layOf(e));let p
   for(const e of ents()){if(!ok(e)||!e.c||e.t==='text'||e.t==='furn')continue;const[l0,l1]=toLocal(e,p),[w,d]=dims(e);if(Math.abs(l0)<=w/2+tol&&Math.abs(l1)<=d/2+tol)pick=e}if(pick)return pick;
   for(const e of ents()){if(!ok(e)||!isPath(e))continue;if(locate(e.pts,p).d<=(e.th||0)/2+tol)pick=e}if(pick)return pick;
   for(const e of ents()){if(!ok(e)||e.t!=='furn')continue;const[l0,l1]=toLocal(e,p);if(Math.abs(l0)<=e.w/2+tol&&Math.abs(l1)<=e.d/2+tol)pick=e}if(pick)return pick;
+  for(const e of ents()){if(ok(e)&&e.t==='axes'&&axesHit(e,p,tol))pick=e}if(pick)return pick;
   for(const e of ents()){if(ok(e)&&e.t==='hatch'&&inPoly(p,e.poly))pick=e}return pick}
 function roomAt(p){const dirs=[[1,0],[-1,0],[0,1],[0,-1]],h=[];for(const d of dirs){let best=1e12,th=0;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;for(let i=1;i<e.pts.length;i++){const t=rayInt(p,d,e.pts[i-1],e.pts[i]);if(t!=null&&t<best){best=t;th=e.th}}}if(best>1e11)return null;h.push(best-th/2)}
   if(h.some(v=>v<=0))return null;return[[p[0]-h[1],p[1]-h[3]],[p[0]+h[0],p[1]-h[3]],[p[0]+h[0],p[1]+h[2]],[p[0]-h[1],p[1]+h[2]]]}
@@ -253,7 +279,7 @@ function drawGrips(){if(tool!=='select'||!selSet.size||selSet.size>200)return;co
   else{const Q=toS(e.c);badge([e.t==='shape'&&e.kind==='circle'?'قطر '+fmtLen(e.w):fmtLen(e.w)+' × '+fmtLen(e.d)],toW(Q[0],Q[1]))}}
 
 // outline of an entity in world units, for box selection: [points, closed]
-function outline(e){if(isPath(e))return[e.pts,!!e.closed];if(e.t==='hatch')return[e.poly,true];if(e.t==='shape')return[shapePts(e),true];if(e.t==='dim'){const[A,B]=dimPts(e);return[[e.a,A,B,e.b],false]}
+function outline(e){if(e.t==='axes'){const g=axesGeo(e),m=(e.ext||1500)+(e.bub||700);return[[[-m,-m],[g.W+m,-m],[g.W+m,g.Hy+m],[-m,g.Hy+m]].map(g.T),true]}if(isPath(e))return[e.pts,!!e.closed];if(e.t==='hatch')return[e.poly,true];if(e.t==='shape')return[shapePts(e),true];if(e.t==='dim'){const[A,B]=dimPts(e);return[[e.a,A,B,e.b],false]}
   let w,d;if(e.t==='text'){w=textMetrics(e);d=e.size*(e.sub?2.2:1.2)}else[w,d]=dims(e);const c=Math.cos(e.ang||0),sn=Math.sin(e.ang||0),T=([x,y])=>[e.c[0]+x*c-y*sn,e.c[1]+x*sn+y*c];
   return[[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(T),true]}
 function inBox(e,x0,y0,x1,y1,cross){const[P,cl]=outline(e);if(!P||!P.length)return false;const inR=p=>p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1;
@@ -266,7 +292,7 @@ function boxSelect(b){const[x0,y1]=toW(Math.min(b.a[0],b.b[0]),Math.min(b.a[1],b
 
 // ---------- typed dimensions while drawing (like AutoCAD's dynamic input): type a number, Tab to the next field, Enter to place ----------
 const UF=()=>({m:1000,cm:10,mm:1})[opt.unit],UN=()=>({m:'متر',cm:'سانت',mm:'میلی'})[opt.unit];
-function dynFields(){if(!pts.length)return null;const o=DEF[tool]||{};
+function dynFields(){if(isMod())return cmd&&cmd.step==='dest'?({move:DLA,copy:DLA,rotate:[['ang','زاویه']],mirror:[['ang','زاویه']],scale:[['k','ضریب']]})[cmd.k]||null:null;if(!pts.length)return null;const o=DEF[tool]||{};
   if((tool==='wall'||tool==='line')&&(o.shape==='straight'||(o.shape==='arc'&&pts.length===1)))return[['len','طول'],['ang','زاویه']];
   if(tool==='shape')return o.kind==='rect'||o.kind==='ellipse'?[['w','عرض'],['d','طول']]:[['w',o.kind==='square'?'ضلع':'قطر']];
   if(tool==='hatch'&&o.mode==='rect')return[['w','عرض'],['d','طول']];
@@ -277,25 +303,26 @@ function dynPt(b){const F=dynFields();if(!F)return b;const a=pts[0],dx=b[0]-a[0]
   const sx=dx<0?-1:1,sy=dy<0?-1:1;if(F.length===2)return[a[0]+sx*(k.w??Math.abs(dx)),a[1]+sy*(k.d??Math.abs(dy))];
   if(k.w==null)return b;if(DEF.shape.kind==='square')return[a[0]+sx*k.w,a[1]+sy*k.w];const A=Math.atan2(dy,dx);return[a[0]+k.w/2*Math.cos(A),a[1]+k.w/2*Math.sin(A)]}
 function dynLive(c){const a=pts[0],dx=c[0]-a[0],dy=c[1]-a[1],r=Math.hypot(dx,dy),k=DEF.shape.kind;
-  return{len:r,ang:(Math.atan2(dy,dx)*R2D+360)%360,w:tool!=='shape'||k==='rect'||k==='ellipse'?Math.abs(dx):k==='square'?Math.max(Math.abs(dx),Math.abs(dy)):2*r,d:Math.abs(dy)}}
+  return{k:cmd&&cmd.ref?r/cmd.ref:1,len:r,ang:(Math.atan2(dy,dx)*R2D+360)%360,w:tool!=='shape'||k==='rect'||k==='ellipse'?Math.abs(dx):k==='square'?Math.max(Math.abs(dx),Math.abs(dy)):2*r,d:Math.abs(dy)}}
 const faN=(n,d)=>Number(n).toLocaleString('fa-IR',{maximumFractionDigits:d,useGrouping:false});
-const dynFmt=(k,v)=>k==='ang'?faN(v,1):faN(v/UF(),{m:3,cm:1,mm:0}[opt.unit]);
+const dynFmt=(k,v)=>k==='ang'?faN(v,1):k==='k'?faN(v,2):faN(v/UF(),{m:3,cm:1,mm:0}[opt.unit]);
 let dynSig='';
 function dynUI(){const bx=$('[data-dyn]');if(!bx)return;const F=dynFields(),foc=bx.contains(document.activeElement);
   const tch=ptype==='touch';bx.classList.toggle('tch',tch);if(!F||(!mouse&&!foc&&!tch)){if(foc)document.activeElement.blur();bx.hidden=true;return}
   const sig=tool+F.map(f=>f[0]+f[1]).join()+opt.unit;
   if(sig!==dynSig){dynSig=sig;bx.innerHTML='';F.forEach(([k,l])=>{const r=el('label','dyf'),inp=el('input');inp.dataset.k=k;inp.inputMode='decimal';inp.dir='ltr';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',l);
-    inp.oninput=()=>{const cp=inp.selectionStart,fv=inp.value.replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[c]).replace(/\./g,'٫');if(fv!==inp.value){inp.value=fv;inp.setSelectionRange(cp,cp)}const v=parseFloat(toEn(inp.value));if(!inp.value.trim()||isNaN(v))delete dynLock[k];else dynLock[k]=k==='ang'?v:v*UF();r.classList.toggle('on',k in dynLock);draw()};
+    inp.oninput=()=>{const cp=inp.selectionStart,fv=inp.value.replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[c]).replace(/\./g,'٫');if(fv!==inp.value){inp.value=fv;inp.setSelectionRange(cp,cp)}const v=parseFloat(toEn(inp.value));if(!inp.value.trim()||isNaN(v))delete dynLock[k];else dynLock[k]=k==='ang'||k==='k'?v:v*UF();r.classList.toggle('on',k in dynLock);draw()};
     inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter'){ev.preventDefault();dynCommit()}
       else if(ev.key==='Tab'){ev.preventDefault();const all=$$('[data-dyn] input'),nx=all[(all.indexOf(inp)+(ev.shiftKey?all.length-1:1))%all.length];nx.focus();nx.select()}
       else if(ev.key==='Escape'){ev.preventDefault();inp.blur();esc()}};
-    r.append(el('span','',l),inp,el('i','',k==='ang'?'°':UN()));bx.append(r)})}
+    r.append(el('span','',l),inp,el('i','',k==='ang'?'°':k==='k'?'×':UN()));bx.append(r)})}
   const a=pts[0],live=dynLive(dynPt(mouse?snapPt||pathPt(mouse):a));
   $$('[data-dyn] input').forEach(inp=>{const k=inp.dataset.k;inp.parentNode.classList.toggle('on',k in dynLock);if(inp!==document.activeElement&&!(k in dynLock))inp.value=dynFmt(k,live[k])});
   bx.hidden=false;const Q=toS(mouse||a);bx.style.left=Math.min(Q[0]+22,W-bx.offsetWidth-8)+'px';bx.style.top=Math.min(Q[1]+22,Hh-bx.offsetHeight-8)+'px'}
 // called when a digit or Tab is pressed while drawing: jump into the first field that is not set yet
 function dynFocus(ch){dynUI();const all=$$('[data-dyn] input');if(!all.length)return;const inp=all.find(i=>!(i.dataset.k in dynLock))||all[0];inp.focus();if(ch){inp.value=ch;inp.oninput()}else inp.select()}
 function dynCommit(){if(!dynFields())return;const a=pts[0],p=dynPt(mouse?snapPt||pathPt(mouse):[a[0]+1,a[1]]);
+  if(isMod()){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();cmdAct(p,true);return}
   if(dist(a,p)<10){flash('اندازه را وارد کنید.');return}if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();act(p,true)}
 
 const PLACE=['elevator','car','column','furn'];
@@ -305,10 +332,11 @@ function updateGhost(){ghost=null;if(!mouse)return;
     const cr=(b[0]-a[0])*(mouse[1]-a[1])-(b[1]-a[1])*(mouse[0]-a[0]);ghost={t:tool,...o,c:[a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])],ang:Math.atan2(b[1]-a[1],b[0]-a[0]),th:w.th,side:cr>0?-1:1,ok:true};return}
   if(tool==='stairs'){const o=DEF.stairs;if(!pts.length){ghost=stairAt(gridSnap(mouse),o.ang);return}const a=pts[0],m=gridSnap(mouse);let ang=o.ang;
     if(dist(a,m)*s>14){const st=Math.PI/12;ang=Math.round((Math.atan2(m[1]-a[1],m[0]-a[0])-H)/st)*st;ang=((ang%TAU)+TAU)%TAU}ghost=stairAt(a,ang);return}
-  if(PLACE.includes(tool))ghost={t:tool,...DEF[tool],c:gridSnap(mouse)}}
+  if(tool==='axes'){ghost={t:'axes',...DEF.axes,o:snapPt?snapPt.slice():gridSnap(mouse)};return}
+  if(PLACE.includes(tool)){ghost={t:tool,...DEF[tool],c:gridSnap(mouse)};const sn=snapShift(handlesOf([ghost]),null);if(sn){ghost.c=[ghost.c[0]+sn.adj[0],ghost.c[1]+sn.adj[1]];osHit=sn.hit}}}
 
 // ---------- history ----------
-function commit(doFn,undoFn){doFn();hist().undo.push({doFn,undoFn});hist().redo=[];computeJoins();markDirty()}
+function commit(doFn,undoFn){geoVer++;doFn();hist().undo.push({doFn,undoFn});hist().redo=[];computeJoins();markDirty()}
 function addMany(list){const L=ents();commit(()=>list.forEach(e=>L.push(e)),()=>list.forEach(e=>{const i=L.indexOf(e);if(i>=0)L.splice(i,1);unpick(e)}));refresh()}
 const addEnt=e=>addMany([e]);
 function delMany(list){const L=ents(),idx=list.map(e=>L.indexOf(e));commit(()=>list.forEach(e=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1);unpick(e)}),()=>list.map((e,k)=>[e,idx[k]]).sort((a,b)=>a[1]-b[1]).forEach(([e,i])=>L.splice(Math.min(i,L.length),0,e)));refresh()}
@@ -317,11 +345,11 @@ const delEnt=e=>delMany([e]);
 function replaceMany(list){const L=ents();let idx=[];commit(()=>{idx=list.map(([e])=>L.indexOf(e));list.forEach(([e,parts])=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1,...parts);unpick(e)})},()=>{for(let k=list.length-1;k>=0;k--){const[e,parts]=list[k],j=parts.length?L.indexOf(parts[0]):-1;if(j>=0)L.splice(j,parts.length,e);else L.splice(Math.min(idx[k],L.length),0,e)}});refresh()}
 const replaceEnt=(e,parts)=>replaceMany([[e,parts]]);
 function setProps(e,patch){const old={};for(const k in patch)old[k]=e[k];commit(()=>Object.assign(e,patch),()=>Object.assign(e,old))}
-function undo(){const a=hist().undo.pop();if(!a)return;a.undoFn();hist().redo.push(a);computeJoins();refresh();draw();markDirty()}
-function redo(){const a=hist().redo.pop();if(!a)return;a.doFn();hist().undo.push(a);computeJoins();refresh();draw();markDirty()}
-const geomOf=e=>JSON.parse(JSON.stringify({c:e.c,pts:e.pts,poly:e.poly,a:e.a,b:e.b}));
+function undo(){const a=hist().undo.pop();if(!a)return;geoVer++;a.undoFn();hist().redo.push(a);computeJoins();refresh();draw();markDirty()}
+function redo(){const a=hist().redo.pop();if(!a)return;geoVer++;a.doFn();hist().undo.push(a);computeJoins();refresh();draw();markDirty()}
+const geomOf=e=>JSON.parse(JSON.stringify({c:e.c,o:e.o,pts:e.pts,poly:e.poly,a:e.a,b:e.b}));
 const mv=(p,d)=>[p[0]+d[0],p[1]+d[1]];
-function setGeom(e,g,d){if(g.c)e.c=mv(g.c,d);if(g.pts)e.pts=g.pts.map(p=>mv(p,d));if(g.poly)e.poly=g.poly.map(p=>mv(p,d));if(g.a){e.a=mv(g.a,d);e.b=mv(g.b,d)}}
+function setGeom(e,g,d){if(g.c)e.c=mv(g.c,d);if(g.o)e.o=mv(g.o,d);if(g.pts)e.pts=g.pts.map(p=>mv(p,d));if(g.poly)e.poly=g.poly.map(p=>mv(p,d));if(g.a){e.a=mv(g.a,d);e.b=mv(g.b,d)}}
 function duplicate(list){const cp=[].concat(list).map(e=>{const c=JSON.parse(JSON.stringify(e));delete c.join;setGeom(c,geomOf(c),[600,-600]);return c});addMany(cp);setSel(cp);refresh();draw()}
 // what is left of e after removing the ranges R ([a,b], a>b wraps on a loop); walls stay walls, shapes become lines. null if nothing is removed
 function cutRanges(e,R){const P=polyOf(e),L=plen(P),iv=[];for(const[a,b]of R){if(a<=b)iv.push([a,b]);else iv.push([a,L],[0,b])}
@@ -336,6 +364,79 @@ function autoDims(){const Ws=ents().filter(e=>e.t==='wall'&&vis(e));if(!Ws.lengt
   const ex=[],ey=[];Ws.forEach(e=>[e.pts[0],e.pts[e.pts.length-1]].forEach(p=>{if(Math.abs(p[1]-y0)<5)ex.push(p[0]);if(Math.abs(p[0]-x0)<5)ey.push(p[1])}));
   const cx=uniq(ex),cy=uniq(ey);if(cx.length>2)for(let i=1;i<cx.length;i++)out.push({t:'dim',a:[cx[i-1],y0],b:[cx[i],y0],off:-g});if(cy.length>2)for(let i=1;i<cy.length;i++)out.push({t:'dim',a:[x0,cy[i-1]],b:[x0,cy[i]],off:g});
   addMany(out);flash(`${fa(out.length)} اندازه اضافه شد.`);draw()}
+
+// ---------- object snap (like AutoCAD's OSNAP, F3): ends, corners, middles, centers, wall faces and, for moving and placing, edges ----------
+let geoVer=0,snapC=null,osHit=null;
+const snapTool=()=>['wall','line','measure','hatch','shape','axes'].includes(tool)||(isMod()&&!!cmd&&cmd.step!=='pick');
+// snap points (P(point, kind)) and edges (S(a, b)) of one entity; a wall gives its centre line and both faces
+function geoOf(e,P,S){if(e.t==='text'||e.t==='dim')return;
+  if(e.t==='axes'){const g=axesGeo(e),x=e.ext||1500;g.X.forEach(a=>g.Y.forEach(b=>P(g.T([a,b]),'end')));if(S){g.X.forEach(a=>S(g.T([a,-x]),g.T([a,g.Hy+x])));g.Y.forEach(b=>S(g.T([-x,b]),g.T([g.W+x,b])))}return}const cv=e.kind==='arc'||e.kind==='curve';
+  if(isPath(e)){const A=e.pts,h=e.t==='wall'?(e.th||0)/2:0;if(cv){P(A[0],'end');P(A[A.length-1],'end')}else A.forEach(p=>P(p,'end'));
+    for(let i=1;i<A.length;i++){const a=A[i-1],b=A[i];if(!cv)P([(a[0]+b[0])/2,(a[1]+b[1])/2],'mid');if(S)S(a,b);
+      if(h){const L=dist(a,b)||1,n=[-(b[1]-a[1])/L*h,(b[0]-a[0])/L*h];for(const g of[1,-1]){const A2=[a[0]+n[0]*g,a[1]+n[1]*g],B2=[b[0]+n[0]*g,b[1]+n[1]*g];if(S)S(A2,B2);if(i===1)P(A2,'end');if(i===A.length-1)P(B2,'end')}}}return}
+  const[Q,cl]=outline(e),n=Q.length,rnd=(e.t==='shape'&&(e.kind==='circle'||e.kind==='ellipse'))||(e.t==='column'&&!!e.round);
+  if(rnd){P(e.c,'cen');if(e.t==='shape')[0,18,36,54].forEach(i=>Q[i]&&P(Q[i],'end'))}else Q.forEach(p=>P(p,'end'));
+  for(let i=0;i<(cl?n:n-1);i++){const a=Q[i],b=Q[(i+1)%n];if(S)S(a,b);if(!rnd||e.t==='column')P([(a[0]+b[0])/2,(a[1]+b[1])/2],rnd?'end':'mid')}}
+function snapCache(){const key=geoVer+'|'+fl+'|'+[...hidden].join()+'|'+ents().length;if(snapC&&snapC.key===key)return snapC;const Pp=[],Ss=[];
+  for(const e of ents())if(vis(e))geoOf(e,(p,k)=>Pp.push({p,k,e}),(a,b)=>Ss.push([a,b,e]));return snapC={key,P:Pp,S:Ss}}
+// nearest snap to p within the pointer tolerance: points first, then (if near) the closest spot on an edge
+function osnapPt(p,skip,near){if(!opt.osnap)return null;const C_=snapCache(),tol=tolPx()/s;let best=null,bd=tol;
+  for(const q of C_.P){const dx=Math.abs(q.p[0]-p[0]);if(dx>bd)continue;const dy=Math.abs(q.p[1]-p[1]);if(dy>bd||(skip&&skip.has(q.e)))continue;const d=Math.hypot(dx,dy);if(d<bd){bd=d;best={p:q.p,k:q.k}}}
+  if(best||!near)return best;let be=null,b2=tol*.75;
+  for(const[a,b,e]of C_.S){if(Math.min(a[0],b[0])-b2>p[0]||Math.max(a[0],b[0])+b2<p[0]||Math.min(a[1],b[1])-b2>p[1]||Math.max(a[1],b[1])+b2<p[1]||(skip&&skip.has(e)))continue;
+    const t=Math.max(0,Math.min(1,proj(p,a,b).t)),q=[a[0]+t*(b[0]-a[0]),a[1]+t*(b[1]-a[1])],d=dist(p,q);if(d<b2){b2=d;be={p:q,k:'near'}}}return be}
+function snapAt(p,skip,near){const r=osnapPt(p,skip,near);osHit=r;return r?r.p.slice():null}
+// points of the things being moved or placed that may stick to others
+function handlesOf(L){const H=[];for(const e of L){geoOf(e,(p,k)=>{if(k!=='mid')H.push(p)});if(H.length>240)break}
+  if(H.length<=240&&H.length)return H;let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;L.forEach(e=>outline(e)[0].forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}));return[[x0,y0],[x1,y0],[x1,y1],[x0,y1]]}
+// the shift that brings the closest handle onto a snap (corner to corner beats corner to edge)
+function snapShift(H,skip){if(!opt.osnap)return null;let best=null;const pen=tolPx()/s*.5;for(const h of H){const r=osnapPt(h,skip,true);if(r){const d=dist(h,r.p)+(r.k==='near'?pen:0);if(!best||d<best.d)best={d,adj:[r.p[0]-h[0],r.p[1]-h[1]],hit:r}}}return best}
+function drawOsnap(){const Q=toS(osHit.p),k=osHit.k;ctx.save();ctx.strokeStyle='#16A34A';ctx.lineWidth=2;ctx.beginPath();
+  if(k==='mid'){ctx.moveTo(Q[0],Q[1]-7);ctx.lineTo(Q[0]+7,Q[1]+5);ctx.lineTo(Q[0]-7,Q[1]+5);ctx.closePath()}else if(k==='cen')ctx.arc(Q[0],Q[1],6,0,TAU);
+  else if(k==='near'){ctx.moveTo(Q[0]-6,Q[1]-6);ctx.lineTo(Q[0]+6,Q[1]-6);ctx.lineTo(Q[0]-6,Q[1]+6);ctx.lineTo(Q[0]+6,Q[1]+6);ctx.closePath()}else ctx.rect(Q[0]-6,Q[1]-6,12,12);ctx.stroke();ctx.restore()}
+function toggleOsnap(){opt.osnap=!opt.osnap;osHit=null;flash(opt.osnap?'چسبندگی به المان‌ها روشن شد.':'چسبندگی به المان‌ها خاموش شد.');savePrefs();refresh();draw()}
+
+// ---------- modify commands like AutoCAD: move, copy, rotate, mirror, scale, erase ----------
+// with something selected a command starts at the base point; otherwise it first asks for a selection (Enter, right click or «ادامه» goes on)
+const MOD=['move','copy','rotate','mirror','scale','erase'],MODN={move:'جابه‌جایی',copy:'کپی',rotate:'چرخش',mirror:'قرینه',scale:'مقیاس',erase:'حذف'},DLA=[['len','فاصله'],['ang','زاویه']];
+let cmd=null,mirKeep=true;
+const isMod=()=>MOD.includes(tool),picking=()=>isMod()&&!!cmd&&cmd.step==='pick';
+function cmdStart(){cmd={k:tool,step:'pick'};if(selSet.size)cmdEnter();else{pillUI();draw()}}
+function cmdEnter(){if(!cmd)return;
+  if(cmd.step==='pick'){if(!selSet.size){flash('اول المان‌ها را انتخاب کنید.');return}
+    if(cmd.k==='erase'){const L=[...selSet];cmd=null;setTool('select');delMany(L);draw();return}
+    cmd.L=[...selSet].filter(e=>!locked.has(layOf(e)));cmd.step='base';pts=[];refresh();draw();return}
+  if(cmd.k==='copy'&&cmd.step==='dest'){cmdEnd();return}esc()}
+function cmdEnd(){cmd=null;pts=[];dynLock={};setTool('select');draw()}
+// the transform for the second point p
+function cmdXf(p){const b=cmd.base,k=cmd.k,dx=p[0]-b[0],dy=p[1]-b[1];
+  if(k==='move'||k==='copy')return{p:q=>[q[0]+dx,q[1]+dy]};
+  if(k==='rotate'){const t=dynLock.ang!=null?dynLock.ang/R2D:Math.atan2(dy,dx),c=Math.cos(t),sn=Math.sin(t);return{rot:t,p:q=>[b[0]+(q[0]-b[0])*c-(q[1]-b[1])*sn,b[1]+(q[0]-b[0])*sn+(q[1]-b[1])*c]}}
+  if(k==='scale'){const f=dynLock.k??Math.max(.01,Math.hypot(dx,dy)/cmd.ref);return{k:f,p:q=>[b[0]+(q[0]-b[0])*f,b[1]+(q[1]-b[1])*f]}}
+  const f=dynLock.ang!=null?dynLock.ang/R2D:Math.atan2(dy,dx),c=Math.cos(2*f),sn=Math.sin(2*f);return{mir:f,p:q=>{const x=q[0]-b[0],y=q[1]-b[1];return[b[0]+x*c+y*sn,b[1]+x*sn-y*c]}}}
+// a transformed copy of an entity; sizes follow a scale, angles follow a rotation, a mirror keeps text readable
+function xformEnt(src,T){const e=JSON.parse(JSON.stringify(src));delete e.join;const P=T.p,nA=a=>((a%TAU)+TAU)%TAU;
+  if(e.pts)e.pts=e.pts.map(P);if(e.poly)e.poly=e.poly.map(P);if(e.a){e.a=P(e.a);e.b=P(e.b)}if(e.c)e.c=P(e.c);if(e.o)e.o=P(e.o);
+  if(T.k&&e.t==='axes'){e.xs=e.xs.map(v=>Math.round(v*T.k));e.ys=e.ys.map(v=>Math.round(v*T.k));e.ext=Math.round((e.ext||1500)*T.k);e.bub=Math.round((e.bub||700)*T.k)}
+  if(T.mir!=null&&e.t==='axes'){e.ang=nA(2*T.mir-(e.ang||0));e.sy=-(e.sy||1)}
+  if(T.rot!=null&&(e.c||e.o))e.ang=nA((e.ang||0)+T.rot);
+  if(T.k){for(const q of['w','d','w1','w2','dw','th','tread','ld','gap','size','sp'])if(typeof e[q]==='number')e[q]=Math.round(e[q]*T.k);if(e.t==='dim')e.off=Math.round(e.off*T.k)}
+  if(T.mir!=null){const f=T.mir;if(e.t==='dim')e.off=-e.off;
+    if(e.c&&e.t!=='text'){if(e.t==='door'){e.ang=nA(2*f-(e.ang||0));e.side=-(e.side||1)}else{e.ang=nA(2*f-(e.ang||0)+Math.PI);if(e.t==='stairs'&&e.kind!=='straight')e.turn=-(e.turn||1)}}}
+  return e}
+const entSnap=e=>{const{join,...r}=e;return JSON.parse(JSON.stringify(r))};
+function entPut(e,o){for(const k in e)if(k!=='join'&&!(k in o))delete e[k];Object.assign(e,JSON.parse(JSON.stringify(o)))}
+function selBBox(L){let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;L.forEach(e=>outline(e)[0].forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}));return[x0,y0,x1,y1]}
+function cmdAct(p,exact){if(!cmd||cmd.step==='pick')return;const q=exact?p.slice():dynPt(snapPt?snapPt.slice():pathPt(p));
+  if(cmd.step==='base'){cmd.base=q;cmd.step='dest';pts=[q];if(cmd.k==='scale'){const[x0,y0,x1,y1]=selBBox(cmd.L);cmd.ref=Math.max(300,Math.hypot(x1-x0,y1-y0)/2)}dynLock={};refresh();draw();return}
+  const k=cmd.k;if((k==='move'||k==='copy'||(k==='mirror'&&dynLock.ang==null))&&dist(q,cmd.base)<1){flash('نقطه‌ی دوم را جای دیگری بزنید.');return}
+  const T=cmdXf(q),L=cmd.L;dynLock={};
+  if(k==='copy'||(k==='mirror'&&mirKeep)){const cp=L.map(e=>xformEnt(e,T));addMany(cp);if(k==='copy'){draw();return}setSel(cp);cmdEnd();return}
+  const old=L.map(entSnap),neu=L.map(e=>entSnap(xformEnt(e,T)));commit(()=>L.forEach((e,i)=>entPut(e,neu[i])),()=>L.forEach((e,i)=>entPut(e,old[i])));setSel(L);cmdEnd()}
+function drawCmd(q){const T=cmdXf(q),k=cmd.k;ctx.save();cmd.L.slice(0,800).forEach(e=>{const x=xformEnt(e,T);x.t==='furn'?drawItem(x,C.acc,.85):drawEnt(x,C.acc)});ctx.restore();
+  const B=toS(cmd.base),Q=toS(q);ctx.save();ctx.strokeStyle=C.acc;ctx.lineWidth=1;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(...B);ctx.lineTo(...Q);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(B[0],B[1],4,0,TAU);ctx.fill();ctx.restore();
+  if(k==='move'||k==='copy')label(fmtLen(dist(cmd.base,q)),cmd.base,q,C.acc);
+  else if(k==='rotate')badge([faN(((T.rot*R2D)%360+360)%360,1)+'°'],toW(Q[0],Q[1]-30));else if(k==='scale')badge(['× '+faN(T.k,2)],toW(Q[0],Q[1]-30))}
 
 // ---------- copy and paste (Ctrl C, Ctrl X, Ctrl V): pasted items land around the pointer, or the middle of the screen ----------
 let clip=null;
@@ -352,6 +453,7 @@ function finishDraft(){const o=DEF[tool];
   if(tool==='measure'&&meas&&!meas.fin){if(finishable())meas.fin=true;else meas=null}
   pts=[];chainStart=null;cutA=null;dynLock={};refresh();draw()}
 function act(p,exact){
+  if(isMod()){cmdAct(p,exact);return}
   if(tool==='select'){setSel([hit(p)]);refresh();draw();return}
   const q=exact?p.slice():dynPt(snapPt?snapPt.slice():pathPt(p)),o=DEF[tool];dynLock={};
   if(tool==='wall'||tool==='line'){const mk=Pp=>tool==='wall'?{t:'wall',pts:Pp,th:o.th,h:o.h,kind:o.shape}:{t:'line',pts:Pp,dash:o.dash,lw:o.lw,kind:o.shape};
@@ -360,7 +462,8 @@ function act(p,exact){
     else{if(pts.length&&dist(pts[pts.length-1],q)<10)return;pts.push(q)}
     refresh();draw();return}
   if(tool==='door'||tool==='window'){mouse=p;updateGhost();if(ghost&&ghost.ok){const g={...ghost};delete g.ok;addEnt(g)}else flash('روی یک دیوار کلیک کنید.');draw();return}
-  if(PLACE.includes(tool)){addEnt({t:tool,...o,c:gridSnap(p)});draw();return}
+  if(tool==='axes'){const ax={t:'axes',...o,xs:o.xs.slice(),ys:o.ys.slice(),o:q.slice()};addEnt(ax);setTool('select');setSel([ax]);refresh();draw();return}
+  if(PLACE.includes(tool)){mouse=p;updateGhost();addEnt({t:tool,...o,c:ghost&&ghost.c?ghost.c.slice():gridSnap(p)});draw();return}
   if(tool==='stairs'){if(!pts.length){pts=[gridSnap(p)];mouse=p;updateGhost();refresh();draw();return}mouse=p;updateGhost();const g={...ghost};delete g.ok;DEF.stairs.ang=g.ang;pts=[];addEnt(g);updateGhost();draw();return}
   if(tool==='shape'){if(!pts.length){pts=[q];refresh();draw();return}const sh=shapeFrom(pts[0],q,o);if(!sh)return;pts=[];
     if(o.as==='wall'){const P=shapePts(sh);addEnt({t:'wall',pts:[...P,P[0].slice()],th:o.th,h:3000,closed:true,kind:'shape'})}else addEnt(sh);draw();return}
@@ -386,7 +489,7 @@ let toastT=0;function flash(m){const t=$('[data-toast]');t.textContent=m;t.hidde
 // ---------- live preview inside each card: shows the click order and highlights the setting under the pointer ----------
 let pvKey=null,pvCur=null;
 function withView(g,w,h,sc,x0,y0,fn){const sv=[ctx,s,ox,oy,W,Hh];ctx=g;s=sc;ox=x0;oy=y0;W=w;Hh=h;try{fn()}finally{[ctx,s,ox,oy,W,Hh]=sv}}
-function drawEnt(e,col){({wall:drawWall,line:drawLine,shape:drawShape,text:drawText,dim:drawDim})[e.t]?({wall:drawWall,line:drawLine,shape:drawShape,text:drawText,dim:drawDim})[e.t](e,col):e.t==='hatch'?drawHatch(e,col,null):drawItem(e,e.t==='furn'?C.furn:col)}
+function drawEnt(e,col){if(e.t==='axes')return drawAxes(e,col);({wall:drawWall,line:drawLine,shape:drawShape,text:drawText,dim:drawDim})[e.t]?({wall:drawWall,line:drawLine,shape:drawShape,text:drawText,dim:drawDim})[e.t](e,col):e.t==='hatch'?drawHatch(e,col,null):drawItem(e,e.t==='furn'?C.furn:col)}
 const PVT=['wall','line','shape','door','window','elevator','stairs','car','column','furn','text','hatch','cut'];
 function pvScene(type,o){const E=[],D=[],N=[],Dm_=(k,a,b,off)=>D.push({k,a,b,off});
   if(type==='wall'||type==='line'){const sh=o.shape||o.kind||'straight';let P,K;

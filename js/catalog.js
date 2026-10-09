@@ -1,13 +1,13 @@
 // ---------- catalog ----------
-const TOOLS={select:['انتخاب','V'],wall:['دیوار','W'],line:['خط','L'],shape:['شکل‌ها','C'],door:['در','D'],window:['پنجره','N'],elevator:['آسانسور','E'],stairs:['پله','S'],car:['پارکینگ','P'],column:['ستون','O'],furn:['المان‌ها','I'],cut:['برش','X'],hatch:['هاشور و کف','H'],text:['متن','T'],measure:['اندازه‌گیری','M']};
+const TOOLS={select:['انتخاب','V'],wall:['دیوار','W'],line:['خط','L'],shape:['شکل‌ها','C'],door:['در','D'],window:['پنجره','N'],elevator:['آسانسور','E'],stairs:['پله','S'],car:['پارکینگ','P'],column:['ستون','O'],axes:['محورها','G'],furn:['المان‌ها','I'],cut:['برش','X'],hatch:['هاشور و کف','H'],text:['متن','T'],measure:['اندازه‌گیری','M']};
 // the right bar shows one button per group; the other tools of a group are tabs at the top of its card
-const GROUPS=[['select'],['wall','line','shape'],['door','window'],['stairs','elevator'],['car','column'],['furn'],['cut','hatch','text'],['measure']];
-const GNAME=['','ترسیم','در و پنجره','پله و آسانسور','پارکینگ و ستون','','ویرایش و نوشتن',''];
+const GROUPS=[['select'],['wall','line','shape'],['door','window'],['stairs','elevator'],['column','axes','car'],['furn'],['cut','hatch','text'],['measure']];
+const GNAME=['','ترسیم','در و پنجره','پله و آسانسور','ستون، محور و پارکینگ','','ویرایش و نوشتن',''];
 const GBREAK=[1,5,6];
 const gOf=k=>GROUPS.findIndex(g=>g.includes(k==='dim'?'measure':k));
 const gCur=GROUPS.map(g=>g[0]);
-const LAYER_OF={shape:'anno',wall:'walls',door:'open',window:'open',elevator:'circ',stairs:'circ',car:'park',column:'struct',furn:'furn',line:'anno',text:'anno',dim:'dims',hatch:'fill'};
-const LAYERS={walls:'دیوارها',open:'در و پنجره',circ:'آسانسور و پله',park:'پارکینگ',struct:'سازه',furn:'مبلمان و تجهیزات',anno:'متن و خطوط',dims:'اندازه‌ها',fill:'هاشور و کف'};
+const LAYER_OF={shape:'anno',wall:'walls',door:'open',window:'open',elevator:'circ',stairs:'circ',car:'park',column:'struct',axes:'axes',furn:'furn',line:'anno',text:'anno',dim:'dims',hatch:'fill'};
+const LAYERS={walls:'دیوارها',open:'در و پنجره',circ:'آسانسور و پله',park:'پارکینگ',struct:'سازه',axes:'محورها',furn:'مبلمان و تجهیزات',anno:'متن و خطوط',dims:'اندازه‌ها',fill:'هاشور و کف'};
 const CATS={living:'نشیمن',bed:'خواب',kit:'آشپزخانه',bath:'سرویس',office:'اداری'};
 const FURN={
   sofa3:{n:'مبل سه‌نفره',cat:'living',w:2100,d:900,sizes:[[1800,850],[2100,900],[2400,950]]},
@@ -52,6 +52,7 @@ const PRESETS={
   elevator:[{nm:'۶۳۰ کیلوگرم',w:1100,d:1400,dw:800},{nm:'۱۰۰۰ کیلوگرم',w:1600,d:1400,dw:900},{nm:'تخت‌بر',w:1400,d:2400,dw:1300},{nm:'خودروبر',w:2700,d:5800,dw:2500}],
   stairs:[{nm:'یو آپارتمانی',kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100},{nm:'یک‌طرفه',kind:'straight',w:1000,tread:280,floorH:3200,n:19},{nm:'ال با پاگرد',kind:'l',w:1000,tread:280,floorH:3200,n:19,n1:7},{nm:'گرد (مارپیچ)',kind:'spiral',w:800,floorH:3200,n:16,sweep:330}],
   car:[{nm:'تک‌واحد',layout:'single'},{nm:'دو خودرو کنار هم',layout:'pair'},{nm:'بین دو ستون',layout:'pairc',clear:4500},{nm:'ردیف سه‌تایی',layout:'row',n:3},{nm:'پشت سر هم',layout:'tandem'},{nm:'سه خودرو بین ستون',layout:'row3c',clear:7000}],
+  axes:[{nm:'۳ × ۲ دهانه‌ی ۴ متری',xs:[4000,4000,4000],ys:[4000,4000]},{nm:'آپارتمان ۱۰ × ۲۰',xs:[3500,3000,3500],ys:[4500,4000,3500,4000,4000]},{nm:'۴ × ۳ دهانه‌ی ۵ متری',xs:[5000,5000,5000,5000],ys:[5000,5000,5000]},{nm:'پارکینگ ۵٫۵ متری',xs:[5500,5500,5500],ys:[5500,5500]}],
   column:[{nm:'۳۰ × ۳۰',w:300,d:300,round:0},{nm:'۴۰ × ۴۰',w:400,d:400,round:0},{nm:'گرد ۵۰',w:500,d:500,round:1},{nm:'۶۰ × ۳۰',w:600,d:300,round:0}],
   cut:[{nm:'بازشوی در',mode:'gap',gw:900},{nm:'گذرگاه',mode:'gap',gw:1500},{nm:'دو نقطه',mode:'points'},{nm:'حذف تکه',mode:'trim'}],
   hatch:[{nm:'سرامیک ۶۰',pat:'grid',sp:600,ang:0},{nm:'کاشی ۳۰',pat:'grid',sp:300,ang:0},{nm:'آجری',pat:'tiles',sp:300,ang:0},{nm:'مورب',pat:'lines',sp:200,ang:Math.PI/4},{nm:'ضربدری',pat:'cross',sp:300,ang:0},{nm:'توپر',pat:'solid',sp:300,ang:0}],
@@ -61,6 +62,7 @@ const LN={solid:'ممتد',dashed:'خط‌چین',center:'محور'};
 const SKIND={straight:'یک‌طرفه',l:'ال',u:'یو',spiral:'گرد'};
 const PSPEC={wall:p=>`${cm(p.th)} سانت`,line:p=>`${LN[p.dash]}، ${['','نازک','متوسط','ضخیم'][p.lw]}`,door:p=>p.leaves===2?`${cm(p.w1)} + ${cm(p.w2)} سانت`:`${cm(p.w)} سانت`,
   window:p=>`${cm(p.w)} سانت، ${fa(p.panes)} لنگه`,elevator:p=>`${cm(p.w)} × ${cm(p.d)}`,stairs:p=>`${SKIND[p.kind]}، عرض ${cm(p.w)}، ${fa(p.n)} پله`,car:p=>carSpec(p),column:p=>p.round?`قطر ${cm(p.w)}`:`${cm(p.w)} × ${cm(p.d)} سانت`,
+  axes:p=>`${fa(p.xs.length)} × ${fa(p.ys.length)} دهانه، ${fa(p.xs.reduce((a,b)=>a+b,0)/1000,1)} × ${fa(p.ys.reduce((a,b)=>a+b,0)/1000,1)} متر`,
   cut:p=>p.mode==='gap'?`بازشوی ${cm(p.gw)} سانت`:p.mode==='points'?'شروع و پایان را بزنید':'بین دو تقاطع',hatch:p=>p.pat==='solid'?'رنگ توپر':`${PATN[p.pat]} ${cm(p.sp)}${p.ang?'، ۴۵ درجه':''}`,text:p=>`${cm(p.size)} سانت${p.bold?'، ضخیم':''}`};
 function carSpec(p){const g=carGeo(p);return p.layout==='pairc'||p.layout==='row3c'?`${fa((p.clear||4500)/1000,1)} متر بین ستون‌ها`:`${fa(g.W/1000,1)} × ${fa(g.L/1000,1)} متر`}
 const SHAPE={k:'shape',l:'شکل',type:'seg',opts:[['صاف','straight'],['قوس','arc'],['منحنی','curve']],tool:1};
@@ -87,6 +89,9 @@ const FIELDS={
     {k:'dash',l:'نوع خط',type:'seg',opts:[['ممتد','solid'],['خط‌چین','dashed'],['محور','center']],when:o=>o.as!=='wall'},{k:'lw',l:'ضخامت',type:'seg',opts:[['نازک',1],['متوسط',2],['ضخیم',3]],when:o=>o.as!=='wall'},
     {k:'fill',l:'زمینه',type:'seg',opts:[['خالی',0],['کم‌رنگ',1]],when:o=>o.as!=='wall'},{...ROT,sel:1}],
   car:[{k:'n',l:'تعداد خودرو',type:'num',u:'عدد',min:2,max:12,step:1,when:o=>o.layout==='row'},{k:'clear',l:'فاصله‌ی آزاد ستون‌ها',type:'num',u:'cm',min:2500,max:9000,step:50,when:o=>o.layout==='pairc'||o.layout==='row3c'},ROT],
+  axes:[{k:'xs',l:'دهانه‌های افقی',type:'spans'},{k:'ys',l:'دهانه‌های عمودی',type:'spans'},{k:'lab',l:'نام‌گذاری',type:'seg',opts:[['افقی ۱۲۳، عمودی ABC','n'],['افقی ABC، عمودی ۱۲۳','a']]},
+    {k:'ends',l:'دایره‌ی نام',type:'seg',opts:[['یک طرف',1],['دو طرف',2]]},{k:'dims',l:'اندازه‌ی دهانه‌ها',type:'seg',opts:[['نمایش',1],['بدون',0]]},
+    {k:'ext',l:'بیرون‌زدگی محورها',type:'num',u:'cm',min:300,max:6000,step:50},{k:'bub',l:'قطر دایره‌ی نام',type:'num',u:'cm',min:200,max:3000,step:50},ROT],
   column:[{k:'w',l:'عرض',type:'num',u:'cm',min:100,max:2000,step:10},{k:'d',l:'عمق',type:'num',u:'cm',min:100,max:2000,step:10},{k:'round',l:'شکل',type:'seg',opts:[['چهارگوش',0],['گرد',1]]},ROT],
   furn:[{k:'w',l:'عرض',type:'num',u:'cm',min:200,max:6000,step:10},{k:'d',l:'عمق',type:'num',u:'cm',min:200,max:6000,step:10},ROT],
   cut:[{k:'mode',l:'روش برش',type:'seg',opts:[['حذف تکه','trim'],['دو نقطه','points'],['بازشو','gap']]},{k:'gw',l:'عرض بازشو',type:'num',u:'cm',min:100,max:8000,step:50,when:o=>o.mode==='gap'}],
@@ -95,7 +100,8 @@ const FIELDS={
   dim:[{k:'off',l:'فاصله‌ی خط اندازه',type:'num',u:'cm',min:-20000,max:20000,step:50}]
 };
 const DEF={wall:{shape:'straight',th:200,h:3000},line:{shape:'straight',dash:'solid',lw:2},door:{leaves:1,w:900,w1:800,w2:800,h:2100,swing:90,flip:false},window:{w:1500,sill:900,panes:2},elevator:{w:1600,d:1400,dw:900,ang:0},
-  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
+  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},axes:{xs:[4000,4000,4000],ys:[4000,4000],lab:'n',ends:2,dims:1,ext:1500,bub:700,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
+  move:{shape:'straight'},copy:{shape:'straight'},rotate:{shape:'straight'},mirror:{shape:'straight'},scale:{},erase:{},
   hatch:{mode:'room',pat:'grid',sp:600,ang:0},text:{str:'اتاق',sub:'',size:350,bold:1,ang:0},measure:{mode:'dist'}};
 let furnCat='living';
 const ROOMS=['نشیمن','پذیرایی','آشپزخانه','اتاق خواب','حمام','سرویس','راهرو','انباری','بالکن','پارکینگ','لابی','دفتر'];
@@ -105,7 +111,7 @@ function hintFor(t){const o=DEF[t]||{};return({select:'روی المان‌ها 
   line:{straight:'نقطه‌ی شروع را بزنید و در هر گوشه کلیک کنید. با دوبار کلیک یا «پایان» تمام کنید.',arc:'شروع، پایان و بعد نقطه‌ای روی قوس را بزنید.',curve:'نقاط منحنی را بزنید و با دوبار کلیک یا «پایان» تمام کنید.'}[o.shape],
   door:'روی دیوار کلیک کنید. در به سمتی باز می‌شود که نشانگر آن‌جاست. F لولا را عوض می‌کند.',window:'روی دیوار کلیک کنید.',elevator:'برای گذاشتن کلیک کنید. R نود درجه می‌چرخاند.',stairs:'جای اولین پله را بزنید، بعد نشانگر را به سمتی که پله بالا می‌رود ببرید و دوباره بزنید. تعداد و ارتفاع پله‌ها از روی ارتفاع طبقه حساب می‌شود.',
   shape:{rect:'یک گوشه و بعد گوشه‌ی مقابل را بزنید.',square:'یک گوشه و بعد گوشه‌ی مقابل را بزنید؛ ضلع‌ها برابر می‌مانند.',circle:'مرکز را بزنید، بعد نقطه‌ای روی محیط.',ellipse:'دو گوشه‌ی کادر دور بیضی را بزنید.',poly:'مرکز را بزنید، بعد جای یکی از رأس‌ها.'}[DEF.shape.kind],
-  car:'برای گذاشتن کلیک کنید. ابعاد هر واحد ثابت است. R می‌چرخاند.',column:'برای گذاشتن کلیک کنید.',furn:'یک المان انتخاب کنید و روی نقشه کلیک کنید. R می‌چرخاند.',
+  car:'برای گذاشتن کلیک کنید. ابعاد هر واحد ثابت است. R می‌چرخاند.',column:'برای گذاشتن کلیک کنید.',axes:'جای تقاطع اولین محورها (گوشه‌ی پایین چپ شبکه) را بزنید؛ به گوشه‌ی دیوارها می‌چسبد. دهانه‌ها را این‌جا بنویسید، مثلاً «۴٫۲، ۳٫۶، ۵» یا «۳*۴». بعد از گذاشتن، از کارت محورها «ستون در همه‌ی تقاطع‌ها» را بزنید. R می‌چرخاند.',furn:'یک المان انتخاب کنید و روی نقشه کلیک کنید. R می‌چرخاند.',
   cut:{points:'روی دیوار، نقطه‌ی شروع برش و بعد پایان آن را بزنید.',gap:'روی دیوار بزنید تا بازشویی به این عرض بریده شود.',trim:'روی تکه‌ی اضافه بزنید تا تا اولین تقاطع حذف شود، یا مثل اتوکد خطی از روی چند تکه بکشید تا همه با هم حذف شوند. با دیوار، خط و شکل‌ها کار می‌کند.'}[o.mode],
   hatch:{rect:'دو گوشه‌ی مقابل را بزنید.',poly:'گوشه‌ها را بزنید و با دوبار کلیک یا «پایان» ببندید.',room:'داخل یک اتاق بزنید تا کفش پر شود.'}[o.mode],
   text:'جای متن را روی نقشه بزنید.',

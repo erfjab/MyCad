@@ -16,7 +16,7 @@ function ddEl(opts,val,onPick,label){const w=el('div','dd'),cur=opts.find(o=>o[1
   b.onclick=ev=>{ev.stopPropagation();const o=L.hidden;$$('.ddl').forEach(x=>{x.hidden=true;x.parentNode.classList.remove('open')});L.hidden=!o;w.classList.toggle('open',o);if(o)L.scrollIntoView({block:'nearest'})};w.append(b,L);return w}
 app.addEventListener('click',()=>{$$('.ddl').forEach(x=>{if(!x.hidden){x.hidden=true;x.parentNode.classList.remove('open')}});requestAnimationFrame(()=>$$('.pop').forEach(fades))});
 function rightUI(){const pop=$('[data-rpop]'),pin=pop.querySelector('.pin');
-  const multi=tool==='select'&&selSet.size>1,target=tool==='select'?sel:null,type=target?target.t:(tool!=='select'?tool:null),anchor=type?(type==='dim'?'measure':type):null;
+  const multi=tool==='select'&&selSet.size>1,target=tool==='select'?sel:null,type=target?target.t:(tool!=='select'&&!isMod()?tool:null),anchor=type?(type==='dim'?'measure':type):null;
   const ga=multi?0:anchor?gOf(anchor):-1;$$('[data-tools] .ib').forEach(b=>{const g=+b.dataset.group;b.classList.toggle('on',g===gOf(tool));b.classList.toggle('open',g===ga&&gOf(tool)!==ga);b.classList.toggle('po',rOpen&&g===ga)});
   pillUI();
   if(multi&&rOpen){multiUI(pop,pin);return}
@@ -71,16 +71,19 @@ function editUI(pin,type,o,isSel,target){const tgt=isSel?target:null;
   const pres=PRESETS[type]||[],pi=pres.findIndex(p=>Object.keys(p).every(k=>k==='nm'||o[k]===p[k]));
   if(pres.length){const sp=el('div','ds');sp.append(el('p','eb',type==='car'?'قالب‌های آماده (طبق ضوابط)':'قالب‌های آماده'));const g=el('div','presets');pres.forEach((p,i)=>{const b=el('button','pre'+(i===pi?' on':''),`<b>${p.nm}</b><span>${PSPEC[type](p)}</span>`);b.onclick=()=>{const patch={...p};delete patch.nm;apply(type,tgt,patch)};g.append(b)});sp.append(g);pin.append(sp)}
   const sc=el('div','ds');sc.append(el('p','eb',`${type==='text'?'متن':type==='cut'?'برش':type==='dim'?'خط اندازه':'تنظیم دستی'}${pi<0&&pres.length?'<span class="cu">● سفارشی</span>':''}`));const fs=el('div','fields');
-  FIELDS[type].forEach(f=>{if((f.sel&&!isSel)||(f.tool&&isSel)||(f.when&&!f.when(o)))return;const wide=f.type==='text'||(f.type==='seg'&&f.opts.length>2);const row=el('div','f'+(wide?' wide':''));row.append(el('label','',f.l));
+  FIELDS[type].forEach(f=>{if((f.sel&&!isSel)||(f.tool&&isSel)||(f.when&&!f.when(o)))return;const wide=f.type==='text'||f.type==='spans'||(f.type==='seg'&&f.opts.length>2);const row=el('div','f'+(wide?' wide':''));row.append(el('label','',f.l));
     const hl=k=>()=>{if(pvKey!==k){pvKey=k;pvRender()}};row.onmouseenter=hl(f.k);row.onmouseleave=hl(null);row.addEventListener('focusin',hl(f.k));
     if(f.type==='dd'){row.className='f wide';row.append(ddEl(f.opts,o[f.k],v=>apply(type,tgt,{[f.k]:v}),f.l))}
     else if(f.type==='seg'){const sg=el('div','seg'+(f.opts.length>3?' wrap':''));if(f.opts.length===4)sg.style.gridTemplateColumns='repeat(4,1fr)';f.opts.forEach(([lab,v])=>{const b=el('button',o[f.k]===v?'on':'',lab);b.onclick=()=>{apply(type,tgt,{[f.k]:v});if(!isSel&&['shape','mode','kind','as'].includes(f.k)){pts=[];cutA=null;pillUI()}};sg.append(b)});row.append(sg)}
     else if(f.type==='text'){const bx=el('div','txtbox'),inp=el('input','txt');inp.id=`f-${type}-${f.k}`;inp.value=o[f.k]||'';inp.setAttribute('aria-label',f.l);let before=o[f.k]||'';
       inp.oninput=()=>{o[f.k]=inp.value;draw()};inp.onchange=()=>{if(isSel&&before!==inp.value){const nv=inp.value,ov=before,k=f.k;commit(()=>target[k]=nv,()=>target[k]=ov);before=nv}};
       bx.append(inp);row.append(bx);fs.append(row);if(f.k==='str'){const ch=el('div','chips');ROOMS.forEach(r=>{const c=el('button','chip',r);c.onclick=()=>apply(type,tgt,{str:r});ch.append(c)});fs.append(ch)}return}
+    else if(f.type==='spans'){row.firstChild.textContent+=` (${UN()})`;const bx=el('div','txtbox'),inp=el('input','txt');inp.dir='ltr';inp.inputMode='decimal';inp.value=spansTxt(o[f.k]);inp.setAttribute('aria-label',f.l);
+      inp.onchange=()=>{const v=parseSpans(inp.value);if(v)apply(type,tgt,{[f.k]:v});else{flash('مثلاً بنویسید: ۴٫۲، ۳٫۶، ۵ یا ۳*۴');inp.value=spansTxt(o[f.k])}};inp.onkeydown=ev=>{if(ev.key==='Enter')inp.blur()};bx.append(inp);row.append(bx)}
     else row.append(numField(f,o,v=>apply(type,tgt,{[f.k]:v})));
     fs.append(row)});
   sc.append(fs);const dv=derived(type,o,isSel);if(dv)sc.append(el('p','derived',dv));
+  if(type==='axes'&&isSel){const b=el('button','btn pri',svg('column')+`ستون ${cm(DEF.column.w)} × ${cm(DEF.column.d)} در همه‌ی تقاطع‌ها`);b.onclick=()=>axesColumns(target);const r=el('div','acts');r.append(b);sc.append(r)}
   if(type==='stairs'){const b=el('button','btn',svg('check')+'تنظیم راحت از روی ارتفاع طبقه');b.onclick=()=>apply('stairs',tgt,autoStairs(o));const r=el('div','acts');r.append(b);sc.append(r)}
   pin.append(sc);
   const sa=el('div','ds');
@@ -120,6 +123,7 @@ function derived(t,o,isSel){
   if(t==='shape'&&isSel){const M=shapeMeasure(o);return`مساحت <b>${fmtArea(M.A)}</b>، محیط ${fmtLen(M.Pm)}`}
   if(t==='car'){const g=carGeo(o),note={single:'هر واحد پارکینگ ۲٫۵ × ۵ متر است.',pair:'دو واحد کنار هم بدون ستون: ۵ × ۵ متر.',pairc:`فاصله‌ی آزاد بین دو ستون برای دو خودرو حداقل ۴٫۵ متر. الان ${fa(o.clear/1000,2)} متر.`,row3c:`سه خودرو بین دو ستون؛ فاصله‌ی آزاد را طبق ضوابط محل تنظیم کنید. الان ${fa(o.clear/1000,2)} متر.`,row:`${fa(g.nx)} واحد کنار هم، هر کدام ۲٫۵ متر.`,tandem:'پارکینگ مزاحم: دو خودرو پشت سر هم.'}[o.layout];return`${note}<br>ابعاد کل <b>${fa(g.W/1000,2)} × ${fa(g.L/1000,2)} متر</b>، ابعاد خودرو ثابت است`}
   if(t==='window')return`عرض هر لنگه ${cm(o.w/o.panes)} سانت`;
+  if(t==='axes'){const g=axesGeo({...o,o:[0,0]});return`${fa(g.X.length)} محور × ${fa(g.Y.length)} محور، ابعاد بین محورها <b>${fmtLen(g.W)} × ${fmtLen(g.Hy)}</b><br>اندازه‌ی ستون‌ها از کارت «ستون» گرفته می‌شود.`}
   if(t==='elevator')return`مساحت کابین ${fmtArea(o.w*o.d)}`;
   if(t==='furn')return`${FURN[o.kind].n}، <b>${cm(o.w)} × ${cm(o.d)} سانت</b>`;
   if(t==='cut'&&o.mode==='trim')return'تکه‌ی بین نزدیک‌ترین دیوارها یا خط‌های متقاطع حذف می‌شود.';
@@ -133,6 +137,11 @@ function apply(type,target,patch){const o=target||DEF[type];
   if(target)setProps(target,patch);else Object.assign(DEF[type],patch);updateGhost();rightUI();draw()}
 function thumb(k){const it=FURN[k],c=document.createElement('canvas'),dp=Math.min(3,devicePixelRatio||1),W0=64,H0=44;c.width=W0*dp;c.height=H0*dp;const g=c.getContext('2d');
   const ex=['dining','meet','rtable'].includes(k)?1000:0,ey=k==='desk'?600:0,sc=Math.min((W0-8)/(it.w+ex),(H0-6)/(it.d+ex+ey));const sv=[ctx,s];ctx=g;s=sc;g.setTransform(dp*sc,0,0,dp*sc,dp*W0/2,dp*(H0/2-ey*sc/2));g.strokeStyle=C.furn;g.lineCap='round';g.lineJoin='round';furnShape(k,it.w,it.d);ctx=sv[0];s=sv[1];return c}
-function pillUI(){const p=$('[data-pill]');if(!drafting()){p.hidden=true;return}p.hidden=false;const o=DEF[tool]||{};
+function pillUI(){const p=$('[data-pill]');
+  if(isMod()&&cmd){p.hidden=false;const k=cmd.k,st=cmd.step;
+    const msg=st==='pick'?`${MODN[k]}: المان‌ها را انتخاب کنید${selSet.size?'، '+fa(selSet.size)+' انتخاب شد':''}`:st==='base'?MODN[k]+': نقطه‌ی مبنا را بزنید':({move:'مقصد را بزنید یا فاصله را تایپ کنید',copy:'جای کپی را بزنید، چند بار هم می‌شود',rotate:'زاویه را با موس نشان دهید یا تایپ کنید',scale:'ضریب را تایپ کنید یا با موس تعیین کنید',mirror:'نقطه‌ی دوم خط قرینه را بزنید'})[k];
+    p.innerHTML=`<span>${msg}</span>`+(st==='pick'&&selSet.size?'<button class="ok" data-go>ادامه</button>':'')+(k==='mirror'&&st==='dest'?`<button data-keep>${mirKeep?'✓ ':''}نگه داشتن اصل</button>`:'')+(k==='copy'&&st==='dest'?'<button class="ok" data-go>پایان</button>':'')+'<button data-cancel>لغو</button>';
+    const g=p.querySelector('[data-go]');if(g)g.onclick=cmdEnter;const kp=p.querySelector('[data-keep]');if(kp)kp.onclick=()=>{mirKeep=!mirKeep;pillUI()};p.querySelector('[data-cancel]').onclick=esc;return}
+  if(!drafting()){p.hidden=true;return}p.hidden=false;const o=DEF[tool]||{};
   const msg=tool==='measure'?({path:'نقطه‌ی بعدی مسیر',area:'گوشه‌ی بعدی',angle:meas&&meas.pts.length===1?'رأس زاویه را بزنید':'نقطه‌ی دوم',dist:'نقطه‌ی دوم',dim:meas&&meas.pts.length===1?'نقطه‌ی دوم':'جای خط اندازه'})[meas.mode]:tool==='cut'?'پایان برش را بزنید':tool==='stairs'?'به سمت بالا رفتن پله بزنید':tool==='shape'?({circle:'نقطه‌ای روی محیط',poly:'جای یک رأس'}[o.kind]||'گوشه‌ی مقابل'):tool==='hatch'?(o.mode==='rect'?'گوشه‌ی مقابل':'گوشه‌ی بعدی'):o.shape==='arc'?(pts.length===1?'پایان قوس':'نقطه‌ای روی قوس'):o.shape==='curve'?'نقطه‌ی بعدی منحنی':'گوشه‌ی بعدی';
   p.innerHTML=`<span>${msg}${dynFields()?"، یا اندازه را تایپ کنید":""}</span>`+(finishable()?'<button class="ok" data-fin>پایان</button>':'')+'<button data-cancel>لغو</button>';const f=p.querySelector('[data-fin]');if(f)f.onclick=finishDraft;p.querySelector('[data-cancel]').onclick=esc}
