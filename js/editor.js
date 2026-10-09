@@ -2,13 +2,18 @@
 const cvEl=$('.cv'),canvas=cvEl.querySelector('canvas'),mainCtx=canvas.getContext('2d');let ctx=mainCtx;
 let W=0,Hh=0,s=.05,s0=.05,ox=0,oy=0,fitted=false,C={};
 let tool='select',pts=[],chainStart=null,mouse=null,snapPt=null,ghost=null,sel=null,meas=null,cutA=null,drag=null,moving=null,ptype='mouse',lastTap=0;
+// selSet holds everything selected; sel is that one entity when exactly one is selected (the card edits it), otherwise null
+let selVer=0,selSet=new Set(),selBox=null,dynLock={},gripDrag=null,gripHot=null;
+function setSel(list){selVer++;selSet=new Set((list||[]).filter(Boolean));sel=selSet.size===1?[...selSet][0]:null;if(!selSet.size&&tool==='select')rOpen=false}
+function unpick(e){selVer++;if(selSet.delete(e))sel=selSet.size===1?[...selSet][0]:null}
+const picked=e=>selSet.has(e);
 let rOpen=false,lPane=null,saved=true;
 const hidden=new Set(),locked=new Set();
 const toS=p=>[p[0]*s+ox,oy-p[1]*s],toW=(x,y)=>[(x-ox)/s,(oy-y)/s];
 const angDeg=(a,b)=>Math.round((Math.atan2(b[1]-a[1],b[0]-a[0])*R2D+360)%360);
 const tolPx=()=>ptype==='touch'?24:12;
 const mob=()=>W<760;
-function readColors(){const cs=getComputedStyle(app);['bg','ink','mute','acc','grid','grid2','furn'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim())}
+function readColors(){const cs=getComputedStyle(app);['bg','ink','mute','acc','warn','grid','grid2','furn'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim())}
 function dims(e){switch(e.t){case'elevator':return[e.w,e.d];case'column':return[e.w,e.d];case'furn':return[e.w,e.d];case'stairs':return stairDims(e);case'shape':return[e.w,e.d];case'car':{const g=carGeo(e);return[g.W,g.L]}case'door':return[e.w,e.th+2*(e.leaves===2?Math.max(e.w1,e.w2):e.w)];case'window':return[e.w,e.th]}return[0,0]}
 const layOf=e=>e.lay||LAYER_OF[e.t],vis=e=>!hidden.has(layOf(e));
 const isPath=e=>e.t==='wall'||e.t==='line';
@@ -126,9 +131,9 @@ function badge(lines,wp,col){const Q=toS(wp);ctx.save();ctx.direction='rtl';ctx.
 function wallDims(){for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const lift=e.th*s/2+3;if(e.pts.length===2){const[a,b]=e.pts,Ls=dist(toS(a),toS(b));if(Ls<56)continue;label(fmtLen(dist(a,b)),a,b,C.mute,lift,1,500)}else{const L=plen(e.pts),i=Math.floor(e.pts.length/2);label(fmtLen(L),e.pts[i-1],e.pts[i],C.mute,lift,1,500)}}}
 function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   if(opt.grid){const st=[50,100,250,500,1000,2500,5000,10000],g=st.find(v=>v*s>=14)||10000;grid(g,C.grid);grid(g*(g===250||g===2500?4:5),C.grid2)}
-  const E=ents().filter(vis),col=e=>e===sel?C.acc:C.ink;
-  E.filter(e=>e.t==='hatch').forEach(e=>drawHatch(e,C.ink,e===sel?C.acc:null));
-  E.filter(e=>e.t==='furn').forEach(e=>drawItem(e,e===sel?C.acc:C.furn));
+  const E=ents().filter(vis),col=e=>picked(e)?C.acc:C.ink;
+  E.filter(e=>e.t==='hatch').forEach(e=>drawHatch(e,C.ink,picked(e)?C.acc:null));
+  E.filter(e=>e.t==='furn').forEach(e=>drawItem(e,picked(e)?C.acc:C.furn));
   E.filter(e=>e.t==='wall').forEach(e=>drawWall(e,col(e)));
   E.filter(e=>e.t==='line').forEach(e=>drawLine(e,col(e)));
   E.filter(e=>e.t==='shape').forEach(e=>drawShape(e,col(e)));
@@ -136,9 +141,12 @@ function draw(){if(!W)return;ctx.fillStyle=C.bg;ctx.fillRect(0,0,W,Hh);
   E.filter(e=>e.t==='text').forEach(e=>drawText(e,col(e)));
   E.filter(e=>e.t==='dim').forEach(e=>drawDim(e,col(e)));
   if(opt.wallDims)wallDims();
-  drawPreview();drawMeasure();
-  if(snapPt&&['wall','line','measure','hatch','shape'].includes(tool)){const Q=toS(snapPt);ctx.strokeStyle=C.acc;ctx.lineWidth=1.5;ctx.strokeRect(Q[0]-6,Q[1]-6,12,12)}}
-function drawPreview(){const m=mouse;if(!m)return;const q=()=>snapPt||pathPt(m);
+  drawGrips();drawPreview();drawMeasure();drawBox();
+  if(snapPt&&['wall','line','measure','hatch','shape'].includes(tool)){const Q=toS(snapPt);ctx.strokeStyle=C.acc;ctx.lineWidth=1.5;ctx.strokeRect(Q[0]-6,Q[1]-6,12,12)}
+  dynUI();selbarUI()}
+// selection box: dragged left to right it is a window (blue, takes what is fully inside); right to left a crossing (green, dashed, takes whatever it touches)
+function drawBox(){if(!selBox||!(selBox.moved||selBox.click))return;const[x0,y0]=selBox.a,[x1,y1]=selBox.b,cross=x1<x0,col=cross?'#16A34A':C.acc;ctx.save();ctx.fillStyle=col;ctx.globalAlpha=.08;ctx.fillRect(x0,y0,x1-x0,y1-y0);ctx.globalAlpha=1;ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.setLineDash(cross?[6,4]:[]);ctx.strokeRect(x0+.5,y0+.5,x1-x0,y1-y0);ctx.restore()}
+function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys(dynLock).length?[pts[0][0]+1,pts[0][1]]:null);if(!m)return;const q=()=>dynPt(snapPt||pathPt(m));
   if(tool==='wall'||tool==='line'){const o=DEF[tool],pv=tool==='wall'?(Pp=>drawWall({pts:Pp,th:o.th},C.acc,.35)):(Pp=>drawLine({pts:Pp,dash:o.dash,lw:o.lw},C.acc,.8));
     if(!pts.length){if(!snapPt){const Q=toS(q());ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(Q[0],Q[1],3.5,0,7);ctx.fill()}return}
     const b=q();
@@ -187,7 +195,7 @@ function liveReadout(){const b=$('[data-live-big]');if(!b)return;const inf=measI
 
 // ---------- snapping + picking ----------
 const gridSnap=p=>opt.snap?[Math.round(p[0]/50)*50,Math.round(p[1]/50)*50]:p.slice();
-function endpointSnap(p){if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e))for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
+function endpointSnap(p,skip){if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e)&&e!==skip)for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
 function pathPt(m){let p=gridSnap(m);const o=DEF[tool];if(pts.length&&o&&o.shape==='straight'){const a0=pts[0],dx=p[0]-a0[0],dy=p[1]-a0[1],a=Math.atan2(dy,dx),q=Math.round(a/H)*H;if(Math.abs(a-q)<.1){const L=Math.hypot(dx,dy);p=gridSnap([a0[0]+Math.round(Math.cos(q))*L,a0[1]+Math.round(Math.sin(q))*L])}}return p}
 function nearestWall(p){let best=null,bd=1e12;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const r=locate(e.pts,p),d=r.d-e.th/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
 function nearestPath(p){let best=null,bd=1e12;for(const e of ents()){if(!isPath(e)||!vis(e)||locked.has(layOf(e)))continue;const d=locate(e.pts,p).d-(e.th||0)/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
@@ -203,6 +211,80 @@ function roomAt(p){const dirs=[[1,0],[-1,0],[0,1],[0,-1]],h=[];for(const d of di
   if(h.some(v=>v<=0))return null;return[[p[0]-h[1],p[1]-h[3]],[p[0]+h[0],p[1]-h[3]],[p[0]+h[0],p[1]+h[2]],[p[0]-h[1],p[1]+h[2]]]}
 function crossings(e){const A=e.pts,out=[];let acc=0;for(let i=1;i<A.length;i++){const L=dist(A[i-1],A[i]);for(const o of ents()){if(o===e||!isPath(o)||!vis(o))continue;const B=o.pts;for(let j=1;j<B.length;j++){const t=segInt(A[i-1],A[i],B[j-1],B[j]);if(t!=null)out.push(acc+t*L)}}acc+=L}return out}
 function trimRange(e,sv){const L=plen(e.pts),v=[0,...crossings(e).filter(x=>x>1&&x<L-1).sort((a,b)=>a-b),L];for(let i=0;i<v.length-1;i++)if(sv>=v[i]&&sv<=v[i+1])return[v[i],v[i+1]];return[0,L]}
+// ---------- grips: handles on the selected items, dragged to reshape them like AutoCAD ----------
+// corners resize boxes (the opposite corner stays put); vertices move the corners of walls, lines and hatches; the two ends move a dimension
+const BOXY=e=>!!e.c&&(e.t==='shape'||e.t==='furn'||e.t==='column'||e.t==='elevator');
+const GMIN={column:100,elevator:800,furn:200};
+function grips(e){if(isPath(e)){if(e.kind==='arc'||e.kind==='curve')return[];const n=e.pts.length;return e.pts.map((p,i)=>({p,id:'v'+i,i})).filter(g=>!(e.closed&&g.i===n-1))}
+  if(e.t==='hatch')return e.poly.map((p,i)=>({p,id:'v'+i,i}));
+  if(e.t==='dim')return[{p:e.a,id:'a',k:'a'},{p:e.b,id:'b',k:'b'}];
+  if(BOXY(e)){const c=Math.cos(e.ang||0),sn=Math.sin(e.ang||0);const mid=Math.min(e.w,e.d)*s>=56;return[[-1,-1],[0,-1],[1,-1],[1,0],[1,1],[0,1],[-1,1],[-1,0]].filter(([sx,sy])=>mid||(sx&&sy)).map(([sx,sy])=>{const x=sx*e.w/2,y=sy*e.d/2;return{p:[e.c[0]+x*c-y*sn,e.c[1]+x*sn+y*c],id:sx+','+sy,sx,sy}})}
+  return[]}
+const gripSnap=e=>JSON.parse(JSON.stringify({pts:e.pts,poly:e.poly,a:e.a,b:e.b,c:e.c,w:e.w,d:e.d,ang:e.ang}));
+function gripRestore(e,o){const c=JSON.parse(JSON.stringify(o));for(const k in c)if(c[k]!==undefined&&k!=='ang')e[k]=c[k]}
+function gripSet(e,g,o,p){
+  if(isPath(e)){e.pts[g.i]=p;if(e.closed&&g.i===0)e.pts[e.pts.length-1]=p.slice();return}
+  if(e.t==='hatch'){e.poly[g.i]=p;return}if(e.t==='dim'){e[g.k]=p;return}
+  // a side grip (sx or sy is 0) changes one dimension only
+  const L=toLocal(o,p),Ox=-g.sx*o.w/2,Oy=-g.sy*o.d/2,mn=GMIN[e.t]||50;let w=g.sx?Math.max(mn,g.sx*(L[0]-Ox)):o.w,d=g.sy?Math.max(mn,g.sy*(L[1]-Oy)):o.d;
+  if(e.t==='shape'&&['square','circle','poly'].includes(e.kind))w=d=g.sx&&g.sy?Math.max(w,d):g.sx?w:d;
+  w=Math.round(w/10)*10;d=Math.round(d/10)*10;const cx=g.sx?Ox+g.sx*w/2:0,cy=g.sy?Oy+g.sy*d/2:0,c=Math.cos(o.ang||0),sn=Math.sin(o.ang||0);
+  e.w=w;e.d=d;e.c=[o.c[0]+cx*c-cy*sn,o.c[1]+cx*sn+cy*c]}
+function gripAt(x,y){if(tool!=='select'||!selSet.size||selSet.size>200)return null;const tol=ptype==='touch'?16:8;let best=null,bd=tol;
+  for(const e of selSet){if(!vis(e)||locked.has(layOf(e)))continue;for(const g of grips(e)){const Q=toS(g.p),dd=Math.max(Math.abs(Q[0]-x),Math.abs(Q[1]-y));if(dd<=bd){bd=dd;best={e,g}}}}return best}
+function drawGrips(){if(tool!=='select'||!selSet.size||selSet.size>200)return;const hot=gripDrag||gripHot;ctx.save();
+  for(const e of selSet){if(!vis(e))continue;for(const g of grips(e)){const Q=toS(g.p),h=hot&&hot.e===e&&hot.g.id===g.id;const r=h?4.5:3.5;ctx.fillStyle=h?C.acc:C.bg;ctx.strokeStyle=C.acc;ctx.lineWidth=1.3;ctx.fillRect(Q[0]-r,Q[1]-r,2*r,2*r);ctx.strokeRect(Q[0]-r+.5,Q[1]-r+.5,2*r-1,2*r-1)}}
+  ctx.restore();if(!gripDrag||!gripDrag.moved)return;const{e,g}=gripDrag;
+  if(isPath(e)||e.t==='hatch'){const P=e.pts||e.poly,n=P.length,cl=e.closed||e.t==='hatch';[[g.i-1,g.i],[g.i,g.i+1]].forEach(([a,b])=>{if(cl){a=(a+n)%n;b=(b+n)%n}if(a<0||b>=n||a===b)return;if(dist(toS(P[a]),toS(P[b]))>40)label(fmtLen(dist(P[a],P[b])),P[a],P[b],C.acc,e.th?e.th*s/2+4:7)})}
+  else if(e.t==='dim')label(fmtLen(dist(e.a,e.b)),e.a,e.b,C.acc);
+  else{const Q=toS(e.c);badge([e.t==='shape'&&e.kind==='circle'?'قطر '+fmtLen(e.w):fmtLen(e.w)+' × '+fmtLen(e.d)],toW(Q[0],Q[1]))}}
+
+// outline of an entity in world units, for box selection: [points, closed]
+function outline(e){if(isPath(e))return[e.pts,!!e.closed];if(e.t==='hatch')return[e.poly,true];if(e.t==='shape')return[shapePts(e),true];if(e.t==='dim'){const[A,B]=dimPts(e);return[[e.a,A,B,e.b],false]}
+  let w,d;if(e.t==='text'){w=textMetrics(e);d=e.size*(e.sub?2.2:1.2)}else[w,d]=dims(e);const c=Math.cos(e.ang||0),sn=Math.sin(e.ang||0),T=([x,y])=>[e.c[0]+x*c-y*sn,e.c[1]+x*sn+y*c];
+  return[[[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]].map(T),true]}
+function inBox(e,x0,y0,x1,y1,cross){const[P,cl]=outline(e);if(!P||!P.length)return false;const inR=p=>p[0]>=x0&&p[0]<=x1&&p[1]>=y0&&p[1]<=y1;
+  if(!cross)return P.every(inR);if(P.some(inR))return true;const R=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],n=P.length;
+  for(let i=0;i<(cl?n:n-1);i++)for(let j=0;j<4;j++)if(segInt(P[i],P[(i+1)%n],R[j],R[(j+1)%4])!=null)return true;
+  return!!e.c&&e.t!=='shape'&&inPoly([(x0+x1)/2,(y0+y1)/2],P)}
+function boxSelect(b){const[x0,y1]=toW(Math.min(b.a[0],b.b[0]),Math.min(b.a[1],b.b[1])),[x1,y0]=toW(Math.max(b.a[0],b.b[0]),Math.max(b.a[1],b.b[1])),cross=b.b[0]<b.a[0];
+  const found=new Set(ents().filter(e=>vis(e)&&!locked.has(layOf(e))&&inBox(e,x0,y0,x1,y1,cross)));
+  setSel(b.shift?[...selSet].filter(e=>!found.has(e)):[...selSet,...found]);refresh();draw()}
+
+// ---------- typed dimensions while drawing (like AutoCAD's dynamic input): type a number, Tab to the next field, Enter to place ----------
+const UF=()=>({m:1000,cm:10,mm:1})[opt.unit],UN=()=>({m:'متر',cm:'سانت',mm:'میلی'})[opt.unit];
+function dynFields(){if(!pts.length)return null;const o=DEF[tool]||{};
+  if((tool==='wall'||tool==='line')&&(o.shape==='straight'||(o.shape==='arc'&&pts.length===1)))return[['len','طول'],['ang','زاویه']];
+  if(tool==='shape')return o.kind==='rect'||o.kind==='ellipse'?[['w','عرض'],['d','طول']]:[['w',o.kind==='square'?'ضلع':'قطر']];
+  if(tool==='hatch'&&o.mode==='rect')return[['w','عرض'],['d','طول']];
+  return null}
+// the point the mouse stands for once the typed values are applied; the mouse still picks the direction
+function dynPt(b){const F=dynFields();if(!F)return b;const a=pts[0],dx=b[0]-a[0],dy=b[1]-a[1],k=dynLock;
+  if(F[0][0]==='len'){const L=k.len??Math.hypot(dx,dy),A=k.ang!=null?k.ang/R2D:Math.atan2(dy,dx);return[a[0]+L*Math.cos(A),a[1]+L*Math.sin(A)]}
+  const sx=dx<0?-1:1,sy=dy<0?-1:1;if(F.length===2)return[a[0]+sx*(k.w??Math.abs(dx)),a[1]+sy*(k.d??Math.abs(dy))];
+  if(k.w==null)return b;if(DEF.shape.kind==='square')return[a[0]+sx*k.w,a[1]+sy*k.w];const A=Math.atan2(dy,dx);return[a[0]+k.w/2*Math.cos(A),a[1]+k.w/2*Math.sin(A)]}
+function dynLive(c){const a=pts[0],dx=c[0]-a[0],dy=c[1]-a[1],r=Math.hypot(dx,dy),k=DEF.shape.kind;
+  return{len:r,ang:(Math.atan2(dy,dx)*R2D+360)%360,w:tool!=='shape'||k==='rect'||k==='ellipse'?Math.abs(dx):k==='square'?Math.max(Math.abs(dx),Math.abs(dy)):2*r,d:Math.abs(dy)}}
+const faN=(n,d)=>Number(n).toLocaleString('fa-IR',{maximumFractionDigits:d,useGrouping:false});
+const dynFmt=(k,v)=>k==='ang'?faN(v,1):faN(v/UF(),{m:3,cm:1,mm:0}[opt.unit]);
+let dynSig='';
+function dynUI(){const bx=$('[data-dyn]');if(!bx)return;const F=dynFields(),foc=bx.contains(document.activeElement);
+  const tch=ptype==='touch';bx.classList.toggle('tch',tch);if(!F||(!mouse&&!foc&&!tch)){if(foc)document.activeElement.blur();bx.hidden=true;return}
+  const sig=tool+F.map(f=>f[0]+f[1]).join()+opt.unit;
+  if(sig!==dynSig){dynSig=sig;bx.innerHTML='';F.forEach(([k,l])=>{const r=el('label','dyf'),inp=el('input');inp.dataset.k=k;inp.inputMode='decimal';inp.dir='ltr';inp.autocomplete='off';inp.spellcheck=false;inp.setAttribute('aria-label',l);
+    inp.oninput=()=>{const cp=inp.selectionStart,fv=inp.value.replace(/[0-9]/g,c=>'۰۱۲۳۴۵۶۷۸۹'[c]).replace(/\./g,'٫');if(fv!==inp.value){inp.value=fv;inp.setSelectionRange(cp,cp)}const v=parseFloat(toEn(inp.value));if(!inp.value.trim()||isNaN(v))delete dynLock[k];else dynLock[k]=k==='ang'?v:v*UF();r.classList.toggle('on',k in dynLock);draw()};
+    inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter'){ev.preventDefault();dynCommit()}
+      else if(ev.key==='Tab'){ev.preventDefault();const all=$$('[data-dyn] input'),nx=all[(all.indexOf(inp)+(ev.shiftKey?all.length-1:1))%all.length];nx.focus();nx.select()}
+      else if(ev.key==='Escape'){ev.preventDefault();inp.blur();esc()}};
+    r.append(el('span','',l),inp,el('i','',k==='ang'?'°':UN()));bx.append(r)})}
+  const a=pts[0],live=dynLive(dynPt(mouse?snapPt||pathPt(mouse):a));
+  $$('[data-dyn] input').forEach(inp=>{const k=inp.dataset.k;inp.parentNode.classList.toggle('on',k in dynLock);if(inp!==document.activeElement&&!(k in dynLock))inp.value=dynFmt(k,live[k])});
+  bx.hidden=false;const Q=toS(mouse||a);bx.style.left=Math.min(Q[0]+22,W-bx.offsetWidth-8)+'px';bx.style.top=Math.min(Q[1]+22,Hh-bx.offsetHeight-8)+'px'}
+// called when a digit or Tab is pressed while drawing: jump into the first field that is not set yet
+function dynFocus(ch){dynUI();const all=$$('[data-dyn] input');if(!all.length)return;const inp=all.find(i=>!(i.dataset.k in dynLock))||all[0];inp.focus();if(ch){inp.value=ch;inp.oninput()}else inp.select()}
+function dynCommit(){if(!dynFields())return;const a=pts[0],p=dynPt(mouse?snapPt||pathPt(mouse):[a[0]+1,a[1]]);
+  if(dist(a,p)<10){flash('اندازه را وارد کنید.');return}if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();act(p,true)}
+
 const PLACE=['elevator','car','column','furn'];
 function updateGhost(){ghost=null;if(!mouse)return;
   if(tool==='door'||tool==='window'){const w=nearestWall(mouse),o=DEF[tool];if(!w){ghost={t:tool,...o,c:gridSnap(mouse),ang:0,th:150,side:1,ok:false};return}
@@ -214,24 +296,30 @@ function updateGhost(){ghost=null;if(!mouse)return;
 
 // ---------- history ----------
 function commit(doFn,undoFn){doFn();hist().undo.push({doFn,undoFn});hist().redo=[];computeJoins();markDirty()}
-function addMany(list){const L=ents();commit(()=>list.forEach(e=>L.push(e)),()=>list.forEach(e=>{const i=L.indexOf(e);if(i>=0)L.splice(i,1);if(sel===e)sel=null}));refresh()}
+function addMany(list){const L=ents();commit(()=>list.forEach(e=>L.push(e)),()=>list.forEach(e=>{const i=L.indexOf(e);if(i>=0)L.splice(i,1);unpick(e)}));refresh()}
 const addEnt=e=>addMany([e]);
-function delMany(list){const L=ents(),idx=list.map(e=>L.indexOf(e));commit(()=>list.forEach(e=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1);if(sel===e)sel=null}),()=>list.map((e,k)=>[e,idx[k]]).sort((a,b)=>a[1]-b[1]).forEach(([e,i])=>L.splice(Math.min(i,L.length),0,e)));refresh()}
+function delMany(list){const L=ents(),idx=list.map(e=>L.indexOf(e));commit(()=>list.forEach(e=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1);unpick(e)}),()=>list.map((e,k)=>[e,idx[k]]).sort((a,b)=>a[1]-b[1]).forEach(([e,i])=>L.splice(Math.min(i,L.length),0,e)));refresh()}
 const delEnt=e=>delMany([e]);
-function replaceEnt(e,parts){const L=ents(),i=L.indexOf(e);commit(()=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1,...parts);if(sel===e)sel=null},()=>{const j=L.indexOf(parts[0]);if(parts.length&&j>=0)L.splice(j,parts.length,e);else L.splice(i,0,e)});refresh()}
+function replaceEnt(e,parts){const L=ents(),i=L.indexOf(e);commit(()=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1,...parts);unpick(e)},()=>{const j=L.indexOf(parts[0]);if(parts.length&&j>=0)L.splice(j,parts.length,e);else L.splice(i,0,e)});refresh()}
 function setProps(e,patch){const old={};for(const k in patch)old[k]=e[k];commit(()=>Object.assign(e,patch),()=>Object.assign(e,old))}
 function undo(){const a=hist().undo.pop();if(!a)return;a.undoFn();hist().redo.push(a);computeJoins();refresh();draw();markDirty()}
 function redo(){const a=hist().redo.pop();if(!a)return;a.doFn();hist().undo.push(a);computeJoins();refresh();draw();markDirty()}
 const geomOf=e=>JSON.parse(JSON.stringify({c:e.c,pts:e.pts,poly:e.poly,a:e.a,b:e.b}));
 const mv=(p,d)=>[p[0]+d[0],p[1]+d[1]];
 function setGeom(e,g,d){if(g.c)e.c=mv(g.c,d);if(g.pts)e.pts=g.pts.map(p=>mv(p,d));if(g.poly)e.poly=g.poly.map(p=>mv(p,d));if(g.a){e.a=mv(g.a,d);e.b=mv(g.b,d)}}
-function duplicate(e){const c=JSON.parse(JSON.stringify(e));delete c.join;setGeom(c,geomOf(c),[600,-600]);addEnt(c);sel=c;refresh();draw()}
+function duplicate(list){const cp=[].concat(list).map(e=>{const c=JSON.parse(JSON.stringify(e));delete c.join;setGeom(c,geomOf(c),[600,-600]);return c});addMany(cp);setSel(cp);refresh();draw()}
 function cutWall(e,a,b){const L=plen(e.pts);if(b-a<1)return;const parts=[];if(a>1)parts.push({...e,pts:slice(e.pts,0,a)});if(b<L-1)parts.push({...e,pts:slice(e.pts,b,L)});parts.forEach(p=>delete p.join);replaceEnt(e,parts)}
 function autoDims(){const Ws=ents().filter(e=>e.t==='wall'&&vis(e));if(!Ws.length){flash('دیواری پیدا نشد.');return}let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;Ws.forEach(e=>e.pts.forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}));
   const g=Math.max(900,Math.max(x1-x0,y1-y0)*.07),uniq=a=>[...new Set(a.map(v=>Math.round(v/10)*10))].sort((p,q)=>p-q),out=[{t:'dim',a:[x0,y0],b:[x1,y0],off:-g*1.8},{t:'dim',a:[x0,y0],b:[x0,y1],off:g*1.8}];
   const ex=[],ey=[];Ws.forEach(e=>[e.pts[0],e.pts[e.pts.length-1]].forEach(p=>{if(Math.abs(p[1]-y0)<5)ex.push(p[0]);if(Math.abs(p[0]-x0)<5)ey.push(p[1])}));
   const cx=uniq(ex),cy=uniq(ey);if(cx.length>2)for(let i=1;i<cx.length;i++)out.push({t:'dim',a:[cx[i-1],y0],b:[cx[i],y0],off:-g});if(cy.length>2)for(let i=1;i<cy.length;i++)out.push({t:'dim',a:[x0,cy[i-1]],b:[x0,cy[i]],off:g});
   addMany(out);flash(`${fa(out.length)} اندازه اضافه شد.`);draw()}
+
+// ---------- copy and paste (Ctrl C, Ctrl X, Ctrl V): pasted items land around the pointer, or the middle of the screen ----------
+let clip=null;
+function copySel(cut){if(!selSet.size)return;const L=[...selSet];clip=L.map(e=>{const c=JSON.parse(JSON.stringify(e));delete c.join;return c});if(cut){delMany(L);draw()}flash(fa(clip.length)+(cut?' المان برداشته شد.':' المان کپی شد.'));refresh()}
+function paste(){if(!clip)return;const cp=clip.map(e=>JSON.parse(JSON.stringify(e)));let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;cp.forEach(e=>outline(e)[0].forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1])}));
+  const at=mouse&&ptype!=='touch'?mouse:toW(W/2,Hh/2),d=gridSnap([at[0]-(x0+x1)/2,at[1]-(y0+y1)/2]);cp.forEach(e=>setGeom(e,geomOf(e),d));addMany(cp);if(tool!=='select')setTool('select');setSel(cp);refresh();draw()}
 
 // ---------- actions ----------
 function finishable(){const o=DEF[tool]||{};if(tool==='wall'||tool==='line')return pts.length>0&&(o.shape==='straight'||(o.shape==='curve'&&pts.length>=2));if(tool==='hatch')return o.mode==='poly'&&pts.length>=3;if(tool==='measure')return!!meas&&!meas.fin&&((meas.mode==='path'&&meas.pts.length>=2)||(meas.mode==='area'&&meas.pts.length>=3));return false}
@@ -240,10 +328,10 @@ function finishDraft(){const o=DEF[tool];
   if((tool==='wall'||tool==='line')&&o.shape==='curve'&&pts.length>=2)addEnt(tool==='wall'?{t:'wall',pts:spline(pts),th:o.th,h:o.h,kind:'curve'}:{t:'line',pts:spline(pts),dash:o.dash,lw:o.lw,kind:'curve'});
   if(tool==='hatch'&&o.mode==='poly'&&pts.length>=3)addEnt({t:'hatch',poly:pts.map(p=>p.slice()),pat:o.pat,sp:o.sp,ang:o.ang});
   if(tool==='measure'&&meas&&!meas.fin){if(finishable())meas.fin=true;else meas=null}
-  pts=[];chainStart=null;cutA=null;refresh();draw()}
-function act(p){
-  if(tool==='select'){sel=hit(p);if(sel)rOpen=true;refresh();draw();return}
-  const q=snapPt?snapPt.slice():pathPt(p),o=DEF[tool];
+  pts=[];chainStart=null;cutA=null;dynLock={};refresh();draw()}
+function act(p,exact){
+  if(tool==='select'){setSel([hit(p)]);refresh();draw();return}
+  const q=exact?p.slice():dynPt(snapPt?snapPt.slice():pathPt(p)),o=DEF[tool];dynLock={};
   if(tool==='wall'||tool==='line'){const mk=Pp=>tool==='wall'?{t:'wall',pts:Pp,th:o.th,h:o.h,kind:o.shape}:{t:'line',pts:Pp,dash:o.dash,lw:o.lw,kind:o.shape};
     if(o.shape==='straight'){if(!pts.length){pts=[q];chainStart=q}else{if(dist(pts[0],q)<10)return;addEnt(mk([pts[0],q]));if(chainStart&&dist(q,chainStart)<1){pts=[];chainStart=null}else pts=[q]}}
     else if(o.shape==='arc'){if(pts.length<2){if(pts.length&&dist(pts[0],q)<10)return;pts.push(q)}else{addEnt(mk(arcPts(pts[0],pts[1],q)));pts=[]}}

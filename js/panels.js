@@ -16,9 +16,10 @@ function ddEl(opts,val,onPick,label){const w=el('div','dd'),cur=opts.find(o=>o[1
   b.onclick=ev=>{ev.stopPropagation();const o=L.hidden;$$('.ddl').forEach(x=>{x.hidden=true;x.parentNode.classList.remove('open')});L.hidden=!o;w.classList.toggle('open',o);if(o)L.scrollIntoView({block:'nearest'})};w.append(b,L);return w}
 app.addEventListener('click',()=>{$$('.ddl').forEach(x=>{if(!x.hidden){x.hidden=true;x.parentNode.classList.remove('open')}});requestAnimationFrame(()=>$$('.pop').forEach(fades))});
 function rightUI(){const pop=$('[data-rpop]'),pin=pop.querySelector('.pin');
-  const target=tool==='select'?sel:null,type=target?target.t:(tool!=='select'?tool:null),anchor=type?(type==='dim'?'measure':type):null;
-  const ga=anchor?gOf(anchor):-1;$$('[data-tools] .ib').forEach(b=>{const g=+b.dataset.group;b.classList.toggle('on',g===gOf(tool));b.classList.toggle('open',g===ga&&gOf(tool)!==ga);b.classList.toggle('po',rOpen&&g===ga)});
+  const multi=tool==='select'&&selSet.size>1,target=tool==='select'?sel:null,type=target?target.t:(tool!=='select'?tool:null),anchor=type?(type==='dim'?'measure':type):null;
+  const ga=multi?0:anchor?gOf(anchor):-1;$$('[data-tools] .ib').forEach(b=>{const g=+b.dataset.group;b.classList.toggle('on',g===gOf(tool));b.classList.toggle('open',g===ga&&gOf(tool)!==ga);b.classList.toggle('po',rOpen&&g===ga)});
   pillUI();
+  if(multi&&rOpen){multiUI(pop,pin);return}
   if(!type||!rOpen){pop.classList.add('shut');return}
   const key=type+(target?'s':'t'),keep=pop.dataset.key===key?pin.scrollTop:0;pop.dataset.key=key;
   pin.innerHTML='';pop.querySelector('.ph').innerHTML='';const isSel=!!target,o=isSel?target:DEF[type];
@@ -27,6 +28,39 @@ function rightUI(){const pop=$('[data-rpop]'),pin=pop.querySelector('.pin');
   const grp=GROUPS[gOf(type)];if(!isSel&&grp.length>1){const tb=el('div','tabs');grp.forEach(k=>{const b=el('button',k===type?'on':'',svg(k)+`<span>${TOOLS[k][0]}</span>`);b.onclick=()=>setTool(k);tb.append(b)});pop.querySelector('.ph').append(tb)}
   if(type==='measure')measureUI(pin);else editUI(pin,type,o,isSel,target);
   pop.classList.remove('shut');pin.scrollTop=keep;place(pop,$(`[data-group="${ga}"]`),'r');fades(pop)}
+// several things selected at once: counts per type (click one to keep only that type), copy and delete for all
+function multiUI(pop,pin){const keep=pop.dataset.key==='multi'?pin.scrollTop:0;pop.dataset.key='multi';pin.innerHTML='';pop.querySelector('.ph').innerHTML='';const L=[...selSet];
+  head(pin,'select',fa(L.length)+' المان','انتخاب‌شده با هم',()=>{rOpen=false;rightUI();if(!mob())draw()});
+  const cnt={};L.forEach(e=>{cnt[e.t]=(cnt[e.t]||0)+1});const s1=el('div','ds');s1.append(el('p','eb','نوع المان‌ها'));const list=el('div','list');
+  for(const t in cnt){const b=el('button','item',`<span class="nm">${t==='dim'?'اندازه':TOOLS[t][0]}</span><em>${fa(cnt[t])}</em>`);b.title='فقط همین نوع انتخاب بماند';b.onclick=()=>{setSel(L.filter(e=>e.t===t));refresh();draw()};list.append(b)}
+  s1.append(list);pin.append(s1);const s2=el('div','ds'),acts=el('div','acts'),Bt=(ic,lab,fn,cls)=>{const b=el('button','btn'+(cls?' '+cls:''),svg(ic)+lab);b.onclick=fn;acts.append(b)};
+  Bt('copy','تکثیر',()=>duplicate(L));Bt('trash','حذف همه',()=>{delMany(L);draw()},'del');s2.append(acts);
+  s2.append(el('p','hint','کلیک روی هر المان آن را اضافه می‌کند و Shift + کلیک کم می‌کند. کادر از چپ به راست فقط چیزهایی را می‌گیرد که کامل داخلش باشند و از راست به چپ هر چه را لمس کند. برای جابه‌جایی همه، یکی از انتخاب‌شده‌ها را بکشید. کلیک روی جای خالی یا Esc انتخاب را پاک می‌کند.'));pin.append(s2);
+  pop.classList.remove('shut');pin.scrollTop=keep;place(pop,$('[data-group="0"]'),'r');fades(pop)}
+// a small tag on the top edge of the selection that names it; clicking it opens a short menu (settings, rotate or flip, copy, duplicate, delete). Same on phones and desktop.
+const SHAPEN={rect:'مستطیل',square:'مربع',circle:'دایره',ellipse:'بیضی',poly:'چندضلعی'};
+function selName(){if(selSet.size>1)return fa(selSet.size)+' المان';const e=sel;return e.t==='furn'?FURN[e.kind].n:e.t==='shape'?SHAPEN[e.kind]:e.t==='dim'?'اندازه':e.t==='hatch'?'هاشور':TOOLS[e.t][0]}
+let sbKey='',sbOpen=false;
+function selbarUI(){const b=$('[data-selbar]');if(!b)return;const n=selSet.size;
+  if(tool!=='select'||!n||(moving&&moving.moved)||(gripDrag&&gripDrag.moved)||(selBox&&selBox.moved)){b.hidden=true;sbOpen=false;return}
+  if(sbKey.split('|')[0]!==String(selVer))sbOpen=false;const key=selVer+'|'+rOpen+'|'+sbOpen;
+  if(key!==sbKey){sbKey=key;b.innerHTML='';const L=[...selSet];
+    const t=el('button','tag'+(sbOpen?' on':''),`<span>${selName()}</span>`+svg('chev'));t.setAttribute('aria-haspopup','menu');t.setAttribute('aria-expanded',sbOpen);t.onclick=ev=>{ev.stopPropagation();sbOpen=!sbOpen;draw()};b.append(t);
+    if(sbOpen){const m=el('div','sbm');m.setAttribute('role','menu');const I=(ic,lab,k,fn,cls)=>{const x=el('button',cls||'',svg(ic)+`<span>${lab}</span>`+(k?`<kbd>${k}</kbd>`:''));x.setAttribute('role','menuitem');x.onclick=ev=>{ev.stopPropagation();sbOpen=false;fn();draw()};m.append(x)};
+      I('edit',rOpen?'بستن تنظیمات':'تنظیمات','',()=>{rOpen=!rOpen;if(rOpen&&mob())lPane=null;refresh()});
+      if(sel&&sel.c&&sel.t!=='door'&&sel.t!=='window')I('rotate','چرخش','R',()=>apply(sel.t,sel,{ang:((sel.ang||0)+H)%TAU}));
+      if(sel&&sel.t==='door')I('flip','برعکس','F',()=>apply('door',sel,{flip:!sel.flip}));
+      I('copy','کپی','Ctrl C',()=>copySel());I('plus','تکثیر','Ctrl D',()=>duplicate(L));m.append(el('hr'));I('trash','حذف','Del',()=>{delMany(L)},'del');b.append(m)}}
+  b.hidden=false;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  if(n<=400)for(const e of selSet)for(const p of outline(e)[0]){const Q=toS(p);x0=Math.min(x0,Q[0]);x1=Math.max(x1,Q[0]);y0=Math.min(y0,Q[1]);y1=Math.max(y1,Q[1])}
+  else{x0=x1=W/2;y0=y1=60}
+  // tables and desks draw their chairs outside their own size; keep the tag clear of them
+  if(n===1&&sel.t==='furn'&&['dining','meet','rtable','desk'].includes(sel.kind)){const m=520*s;x0-=m;x1+=m;y0-=m;y1+=m}
+  if(x1<0||x0>W||y1<0||y0>Hh){b.hidden=true;return}
+  // right edge of the tag lines up with the right edge of the selection, just above it (below when there is no room); never under the side bars
+  const bw=b.offsetWidth,bh=b.offsetHeight,lo=mob()?64:8,bot=Hh-bh-(mob()?90:8),sl=mob()?8:76;let top=y0-bh-8;if(top<lo)top=y1+8;top=Math.max(lo,Math.min(bot,top));
+  b.style.left=Math.max(sl,Math.min(W-bw-sl,x1-bw))+'px';b.style.top=top+'px';b.classList.toggle('up',top>Hh*.6)}
+app.addEventListener('pointerdown',ev=>{if(sbOpen&&!ev.target.closest('[data-selbar]')){sbOpen=false;sbKey='';selbarUI()}},true);
 function fades(pop){const pin=pop.querySelector('.pin'),h=pop.querySelector('.ph');pop.style.setProperty('--hh',(h?h.offsetHeight+1:0)+'px');pop.classList.toggle('mt',pin.scrollTop>4);pop.classList.toggle('mb',pin.scrollTop+pin.clientHeight<pin.scrollHeight-4)}
 $$('.pop .pin').forEach(p=>p.addEventListener('scroll',()=>fades(p.parentNode),{passive:true}));
 function editUI(pin,type,o,isSel,target){const tgt=isSel?target:null;
@@ -60,7 +94,7 @@ function measureUI(pin){const o=DEF.measure,s1=el('div','ds');s1.append(el('p','
   const inf=measInfo(),s2=el('div','ds');s2.append(el('div','readout',inf.big));s2.lastChild.dataset.liveBig='';const sm=el('p','derived',inf.small);sm.dataset.liveSmall='';s2.append(sm);
   const acts=el('div','acts');
   if(meas&&meas.fin&&meas.mode==='dist'){const b=el('button','btn pri',svg('dim')+'ثبت روی نقشه');b.onclick=()=>{const[a,c]=meas.pts;meas=null;addEnt({t:'dim',a,b:c,off:0});flash('اندازه روی نقشه ثبت شد.');draw()};acts.append(b)}
-  if(meas&&meas.fin&&(meas.mode==='room'||meas.mode==='area')){const b=el('button','btn pri',svg('text')+'برچسب مساحت');b.onclick=()=>{const Pp=meas.pts,t={t:'text',c:gridSnap(centroid(Pp)),str:'اتاق',sub:fmtAreaFixed(area(Pp)),size:320,bold:1,ang:0};meas=null;addEnt(t);tool='select';sel=t;rOpen=true;refresh();draw();};acts.append(b)}
+  if(meas&&meas.fin&&(meas.mode==='room'||meas.mode==='area')){const b=el('button','btn pri',svg('text')+'برچسب مساحت');b.onclick=()=>{const Pp=meas.pts,t={t:'text',c:gridSnap(centroid(Pp)),str:'اتاق',sub:fmtAreaFixed(area(Pp)),size:320,bold:1,ang:0};meas=null;addEnt(t);tool='select';setSel([t]);rOpen=true;refresh();draw();};acts.append(b)}
   if(meas&&(meas.fin||meas.pts.length)){const b=el('button','btn','پاک کردن');b.onclick=()=>{meas=null;refresh();draw()};acts.append(b)}
   if(acts.children.length)s2.append(acts);pin.append(s2);
   const s3=el('div','ds');s3.append(el('p','eb','نمایش و واحد'));const sw=(k,lab)=>{const r=el('div','opt',`<span>${lab}</span>`),b=el('button','sw'+(opt[k]?' on':''));b.setAttribute('aria-label',lab);b.onclick=()=>{opt[k]=!opt[k];refresh();draw()};r.append(b);return r};
@@ -101,4 +135,4 @@ function thumb(k){const it=FURN[k],c=document.createElement('canvas'),dp=Math.mi
   const ex=['dining','meet','rtable'].includes(k)?1000:0,ey=k==='desk'?600:0,sc=Math.min((W0-8)/(it.w+ex),(H0-6)/(it.d+ex+ey));const sv=[ctx,s];ctx=g;s=sc;g.setTransform(dp*sc,0,0,dp*sc,dp*W0/2,dp*(H0/2-ey*sc/2));g.strokeStyle=C.furn;g.lineCap='round';g.lineJoin='round';furnShape(k,it.w,it.d);ctx=sv[0];s=sv[1];return c}
 function pillUI(){const p=$('[data-pill]');if(!drafting()){p.hidden=true;return}p.hidden=false;const o=DEF[tool]||{};
   const msg=tool==='measure'?({path:'نقطه‌ی بعدی مسیر',area:'گوشه‌ی بعدی',angle:meas&&meas.pts.length===1?'رأس زاویه را بزنید':'نقطه‌ی دوم',dist:'نقطه‌ی دوم',dim:meas&&meas.pts.length===1?'نقطه‌ی دوم':'جای خط اندازه'})[meas.mode]:tool==='cut'?'پایان برش را بزنید':tool==='stairs'?'به سمت بالا رفتن پله بزنید':tool==='shape'?({circle:'نقطه‌ای روی محیط',poly:'جای یک رأس'}[o.kind]||'گوشه‌ی مقابل'):tool==='hatch'?(o.mode==='rect'?'گوشه‌ی مقابل':'گوشه‌ی بعدی'):o.shape==='arc'?(pts.length===1?'پایان قوس':'نقطه‌ای روی قوس'):o.shape==='curve'?'نقطه‌ی بعدی منحنی':'گوشه‌ی بعدی';
-  p.innerHTML=`<span>${msg}</span>`+(finishable()?'<button class="ok" data-fin>پایان</button>':'')+'<button data-cancel>لغو</button>';const f=p.querySelector('[data-fin]');if(f)f.onclick=finishDraft;p.querySelector('[data-cancel]').onclick=esc}
+  p.innerHTML=`<span>${msg}${dynFields()?"، یا اندازه را تایپ کنید":""}</span>`+(finishable()?'<button class="ok" data-fin>پایان</button>':'')+'<button data-cancel>لغو</button>';const f=p.querySelector('[data-fin]');if(f)f.onclick=finishDraft;p.querySelector('[data-cancel]').onclick=esc}
