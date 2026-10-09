@@ -50,7 +50,7 @@ const PRESETS={
   door:[{nm:'سرویس ۷۰',leaves:1,w:700},{nm:'اتاق ۹۰',leaves:1,w:900},{nm:'ورودی ۱۱۰',leaves:1,w:1100},{nm:'دولنگه مساوی',leaves:2,w1:800,w2:800},{nm:'لنگه و نیم',leaves:2,w1:900,w2:400},{nm:'دولنگه پهن',leaves:2,w1:1000,w2:1000}],
   window:[{nm:'کوچک ۹۰',w:900,panes:1},{nm:'معمولی ۱۵۰',w:1500,panes:2},{nm:'عریض ۲۴۰',w:2400,panes:3},{nm:'نواری ۳۶۰',w:3600,panes:4}],
   elevator:[{nm:'۶۳۰ کیلوگرم',w:1100,d:1400,dw:800},{nm:'۱۰۰۰ کیلوگرم',w:1600,d:1400,dw:900},{nm:'تخت‌بر',w:1400,d:2400,dw:1300},{nm:'خودروبر',w:2700,d:5800,dw:2500}],
-  stairs:[{nm:'یو آپارتمانی',kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100},{nm:'یک‌طرفه',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:0,l0:0,l1:0},{nm:'یک‌طرفه با پاگرد وسط',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:1,m1:9,d1:1100,l0:0,l1:0},{nm:'ال با پاگرد',kind:'l',w:1000,tread:280,floorH:3200,n:19,n1:7},{nm:'قیچی با پاگرد',kind:'scissor',w:1000,tread:280,floorH:3200,n:19,nl:0,l0:1000,l1:1000,gap:0},{nm:'گرد (مارپیچ)',kind:'spiral',w:800,floorH:3200,n:16,sweep:330}],
+  stairs:[{nm:'یو آپارتمانی',kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100},{nm:'یک‌طرفه',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:0,l0:0,l1:0},{nm:'یک‌طرفه با پاگرد وسط',kind:'straight',w:1000,tread:280,floorH:3200,n:19,nl:1,m1:9,d1:1100,l0:0,l1:0},{nm:'ال با پاگرد',kind:'l',w:1000,tread:280,floorH:3200,n:19,n1:7},{nm:'دو رشته‌ی قیچی',kind:'scissor',sd:0,w:1000,tread:280,floorH:3200,n:19,nl:0,l0:1000,l1:1000,gap:0},{nm:'دو رشته‌ی هم‌جهت',kind:'scissor',sd:1,w:1000,tread:280,floorH:3200,n:19,nl:0,l0:1000,l1:1000,gap:300},{nm:'گرد (مارپیچ)',kind:'spiral',w:800,floorH:3200,n:16,sweep:330}],
   car:[{nm:'تک‌واحد',layout:'single'},{nm:'دو خودرو کنار هم',layout:'pair'},{nm:'بین دو ستون',layout:'pairc',clear:4500},{nm:'ردیف سه‌تایی',layout:'row',n:3},{nm:'پشت سر هم',layout:'tandem'},{nm:'سه خودرو بین ستون',layout:'row3c',clear:7000}],
   axes:[{nm:'۳ × ۲ دهانه‌ی ۴ متری',xs:[4000,4000,4000],ys:[4000,4000]},{nm:'آپارتمان ۱۰ × ۲۰',xs:[3500,3000,3500],ys:[4500,4000,3500,4000,4000]},{nm:'۴ × ۳ دهانه‌ی ۵ متری',xs:[5000,5000,5000,5000],ys:[5000,5000,5000]},{nm:'پارکینگ ۵٫۵ متری',xs:[5500,5500,5500],ys:[5500,5500]}],
   column:[{nm:'۳۰ × ۳۰',w:300,d:300,round:0},{nm:'۴۰ × ۴۰',w:400,d:400,round:0},{nm:'گرد ۵۰',w:500,d:500,round:1},{nm:'۶۰ × ۳۰',w:600,d:300,round:0}],
@@ -59,7 +59,7 @@ const PRESETS={
   text:[{nm:'عنوان',size:600,bold:1},{nm:'نام اتاق',size:350,bold:1},{nm:'برچسب',size:250,bold:0},{nm:'یادداشت',size:180,bold:0}]
 };
 const LN={solid:'ممتد',dashed:'خط‌چین',center:'محور'};
-const SKIND={straight:'یک‌طرفه',l:'ال',u:'یو',scissor:'قیچی',spiral:'گرد'};
+const SKIND={straight:'یک‌طرفه',l:'ال',u:'یو',scissor:'دو رشته',spiral:'گرد'};
 const PSPEC={wall:p=>`${cm(p.th)} سانت`,line:p=>`${LN[p.dash]}، ${['','نازک','متوسط','ضخیم'][p.lw]}`,door:p=>p.leaves===2?`${cm(p.w1)} + ${cm(p.w2)} سانت`:`${cm(p.w)} سانت`,
   window:p=>`${cm(p.w)} سانت، ${fa(p.panes)} لنگه`,elevator:p=>`${cm(p.w)} × ${cm(p.d)}`,stairs:p=>`${SKIND[p.kind]}، عرض ${cm(p.w)}، ${fa(p.n)} پله${p.nl?'، '+fa(p.nl)+' پاگرد میانی':''}`,car:p=>carSpec(p),column:p=>p.round?`قطر ${cm(p.w)}`:`${cm(p.w)} × ${cm(p.d)} سانت`,
   axes:p=>`${fa(p.xs.length)} × ${fa(p.ys.length)} دهانه، ${fa(p.xs.reduce((a,b)=>a+b,0)/1000,1)} × ${fa(p.ys.reduce((a,b)=>a+b,0)/1000,1)} متر`,
@@ -73,17 +73,17 @@ const FIELDS={
   door:[{k:'leaves',l:'تعداد لنگه',type:'seg',opts:[['یک‌لنگه',1],['دولنگه',2]]},{k:'w',l:'عرض در',type:'num',u:'cm',min:500,max:3000,step:10,when:o=>o.leaves!==2},{k:'w1',l:'لنگه‌ی اول',type:'num',u:'cm',min:200,max:1500,step:10,when:o=>o.leaves===2},{k:'w2',l:'لنگه‌ی دوم',type:'num',u:'cm',min:200,max:1500,step:10,when:o=>o.leaves===2},{k:'h',l:'ارتفاع',type:'num',u:'cm',min:1800,max:3500,step:10},{k:'swing',l:'زاویه‌ی باز شدن',type:'num',u:'°',min:30,max:180,step:5},{k:'flip',l:'سمت لولا',type:'seg',opts:[['راست',false],['چپ',true]]},{k:'side',l:'باز شدن به',type:'seg',opts:[['این طرف',1],['آن طرف',-1]],sel:1}],
   window:[{k:'w',l:'عرض',type:'num',u:'cm',min:300,max:8000,step:50},{k:'sill',l:'ارتفاع از کف',type:'num',u:'cm',min:0,max:2000,step:50},{k:'panes',l:'تعداد لنگه',type:'num',u:'',min:1,max:8,step:1}],
   elevator:[{k:'w',l:'عرض کابین',type:'num',u:'cm',min:800,max:3500,step:10},{k:'d',l:'عمق کابین',type:'num',u:'cm',min:800,max:7000,step:10},{k:'dw',l:'عرض در',type:'num',u:'cm',min:600,max:3000,step:10},{k:'ds',l:'سمت در',type:'seg',opts:[['پایین','b'],['بالا','t'],['راست','r'],['چپ','l']]},{k:'wt',l:'ضخامت دیوار چاهک (همه‌ی طرف‌ها)',type:'num',u:'cm',min:0,max:600,step:10},ROT],
-  stairs:[{k:'kind',l:'نوع پله',type:'seg',opts:[['یک‌طرفه','straight'],['ال (L)','l'],['یو (U)','u'],['قیچی (دو رشته)','scissor'],['گرد','spiral']]},
+  stairs:[{k:'kind',l:'نوع پله',type:'seg',opts:[['یک‌طرفه','straight'],['ال (L)','l'],['یو (U)','u'],['دو رشته','scissor'],['گرد','spiral']]},
     {k:'floorH',l:'ارتفاع طبقه',type:'num',u:'cm',min:2000,max:6000,step:50},{k:'n',l:'تعداد پله',type:'num',u:'عدد',min:3,max:40,step:1},
     {k:'tread',l:'کف پله (عمق)',type:'num',u:'cm',min:220,max:400,step:5,when:o=>o.kind!=='spiral'},{k:'w',l:'عرض پله',type:'num',u:'cm',min:600,max:3000,step:10},
     {k:'n1',l:'پله‌ها تا پاگرد',type:'num',u:'عدد',min:2,max:38,step:1,when:o=>o.kind==='l'||o.kind==='u'},
-    {k:'ld',l:'عمق پاگرد',type:'num',u:'cm',min:800,max:3000,step:10,when:o=>o.kind==='u'},{k:'gap',l:'چشمه‌ی وسط',type:'num',u:'cm',min:0,max:2000,step:10,when:o=>o.kind==='u'||o.kind==='scissor'},
+    {k:'ld',l:'عمق پاگرد',type:'num',u:'cm',min:800,max:3000,step:10,when:o=>o.kind==='u'},{k:'sd',l:'جهت دو رشته',type:'seg',opts:[['خلاف هم (قیچی)',0],['هم‌جهت',1]],when:o=>o.kind==='scissor'},{k:'gap',l:'چشمه‌ی وسط',type:'num',u:'cm',min:0,max:2000,step:10,when:o=>o.kind==='u'||o.kind==='scissor'},
     {k:'l0',l:'پاگرد ابتدا (پایین پله)',type:'num',u:'cm',min:0,max:6000,step:50,when:o=>o.kind!=='spiral'},{k:'l1',l:'پاگرد انتها (بالای پله)',type:'num',u:'cm',min:0,max:6000,step:50,when:o=>o.kind!=='spiral'},
     {k:'nl',l:'پاگرد میانی',type:'seg',opts:[['ندارد',0],['یکی',1],['دو تا',2],['سه تا',3]],when:o=>o.kind==='straight'||o.kind==='scissor'},
     ...[1,2,3].flatMap(i=>[{k:'m'+i,l:`پاگرد ${['','اول','دوم','سوم'][i]}، بعد از پله‌ی`,type:'num',u:'عدد',min:1,max:38,step:1,when:o=>(o.kind==='straight'||o.kind==='scissor')&&(o.nl|0)>=i},{k:'d'+i,l:`عمق پاگرد ${['','اول','دوم','سوم'][i]}`,type:'num',u:'cm',min:300,max:6000,step:50,when:o=>(o.kind==='straight'||o.kind==='scissor')&&(o.nl|0)>=i}]),
     {k:'sweep',l:'زاویه‌ی گردش',type:'num',u:'°',min:90,max:360,step:15,when:o=>o.kind==='spiral'},
     {k:'turn',l:'جهت چرخش',type:'seg',opts:[['به راست',1],['به چپ',-1]],when:o=>o.kind!=='straight'},
-    {k:'dir',l:'فلش',type:'seg',opts:[['بالا','up'],['پایین','down']]},{k:'cut',l:'نمایش',type:'seg',opts:[['کامل',0],['خط برش',1]]},ROT],
+    {k:'mk',l:'فلش و نوشته',type:'seg',opts:[['هر دو','both'],['فقط فلش','arrow'],['هیچ‌کدام','none']]},{k:'dir',l:'فلش',type:'seg',opts:[['بالا','up'],['پایین','down']],when:o=>o.mk!=='none'},{k:'cut',l:'نمایش',type:'seg',opts:[['کامل',0],['خط برش',1]]},ROT],
   shape:[{k:'kind',l:'شکل',type:'seg',opts:[['مستطیل','rect'],['مربع','square'],['دایره','circle'],['بیضی','ellipse'],['چندضلعی','poly']]},
     {k:'sides',l:'تعداد ضلع',type:'num',u:'عدد',min:3,max:12,step:1,when:o=>o.kind==='poly'},
     {k:'as',l:'رسم به صورت',type:'seg',opts:[['خط','line'],['دیوار','wall']],tool:1},{k:'th',l:'ضخامت دیوار',type:'num',u:'cm',min:50,max:600,step:10,tool:1,when:o=>o.as==='wall'},
@@ -103,7 +103,7 @@ const FIELDS={
   dim:[{k:'off',l:'فاصله‌ی خط اندازه',type:'num',u:'cm',min:-20000,max:20000,step:50}]
 };
 const DEF={wall:{shape:'straight',th:200,h:3000},line:{shape:'straight',dash:'solid',lw:2},door:{leaves:1,w:900,w1:800,w2:800,h:2100,swing:90,flip:false},window:{w:1500,sill:900,panes:2},elevator:{w:1600,d:1400,dw:900,ds:'b',wt:200,ang:0},
-  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,l0:0,l1:0,nl:0,m1:9,d1:1100,m2:14,d2:1100,m3:16,d3:1100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},axes:{xs:[4000,4000,4000],ys:[4000,4000],lab:'n',ends:2,dims:1,ext:1500,bub:700,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
+  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,l0:0,l1:0,nl:0,m1:9,d1:1100,m2:14,d2:1100,m3:16,d3:1100,turn:1,sweep:330,dir:'up',mk:'both',sd:0,cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},axes:{xs:[4000,4000,4000],ys:[4000,4000],lab:'n',ends:2,dims:1,ext:1500,bub:700,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
   move:{shape:'straight'},copy:{shape:'straight'},rotate:{shape:'straight'},mirror:{shape:'straight'},scale:{},erase:{},
   hatch:{mode:'room',pat:'grid',sp:600,ang:0},text:{str:'اتاق',sub:'',size:350,bold:1,ang:0},measure:{mode:'dist'}};
 let furnCat='living';
@@ -162,9 +162,16 @@ function stairGeo(e){const n=Math.max(3,e.n|0),t=e.tread||280,w=e.w||1100,k=e.ki
   // straight: every step slot is one tread deep, except mid landings (after step m1, m2, m3) which take their own depth
   // scissor: two straight flights side by side going opposite ways, each with its own landings, arrow and label
   else if(k==='scissor'){const g=Math.max(0,e.gap??0),T=n-1,Y=flightY(),S=-Y[T],l0=Math.max(0,e.l0||0),l1=Math.max(0,e.l1||0),Lt=l0+S+l1,xa=[-(w+g/2),-g/2],xb=[g/2,w+g/2],rc=(x,y0,y1)=>[[x[0],y0],[x[1],y0],[x[1],y1],[x[0],y1]];
-    O.push(rc(xa,-l0,-l0-S),rc(xb,-Lt+l0,-Lt+l0+S));if(l0)O.push(rc(xa,0,-l0),rc(xb,-Lt,-Lt+l0));if(l1)O.push(rc(xa,-l0-S,-Lt),rc(xb,-Lt+l0+S,0));
-    for(let i=1;i<T;i++){L.push([[xa[0],-l0+Y[i]],[xa[1],-l0+Y[i]],i+1,[0,-1]]);L.push([[xb[0],-Lt+l0-Y[i]],[xb[1],-Lt+l0-Y[i]],i+1,[0,1]])}
-    const ca=(xa[0]+xa[1])/2,cb=(xb[0]+xb[1])/2;walks=[[[ca,-l0-t*.5],[ca,-l0-S+t*.35]],[[cb,-Lt+l0+t*.5],[cb,-Lt+l0+S-t*.35]]];walk=walks[0]}
+    const ca=(xa[0]+xa[1])/2,cb=(xb[0]+xb[1])/2;
+    // sd=1: both flights run the same way; otherwise the second one comes back (scissor). The fifth item of a tread line is its flight, for the break marks
+    if(e.sd){O.push(rc(xa,-l0,-l0-S),rc(xb,-l0,-l0-S));if(l0)O.push(rc(xa,0,-l0),rc(xb,0,-l0));if(l1)O.push(rc(xa,-l0-S,-Lt),rc(xb,-l0-S,-Lt));
+      for(let i=1;i<T;i++){L.push([[xa[0],-l0+Y[i]],[xa[1],-l0+Y[i]],i+1,[0,-1],0]);L.push([[xb[0],-l0+Y[i]],[xb[1],-l0+Y[i]],i+1,[0,-1],1])}
+      walks=[[[ca,-l0-t*.5],[ca,-l0-S+t*.35]],[[cb,-l0-t*.5],[cb,-l0-S+t*.35]]]}
+    else{O.push(rc(xa,-l0,-l0-S),rc(xb,-Lt+l0,-Lt+l0+S));if(l0)O.push(rc(xa,0,-l0),rc(xb,-Lt,-Lt+l0));if(l1)O.push(rc(xa,-l0-S,-Lt),rc(xb,-Lt+l0+S,0));
+      for(let i=1;i<T;i++){L.push([[xa[0],-l0+Y[i]],[xa[1],-l0+Y[i]],i+1,[0,-1],0]);L.push([[xb[0],-Lt+l0-Y[i]],[xb[1],-Lt+l0-Y[i]],i+1,[0,1],1])}
+      walks=[[[ca,-l0-t*.5],[ca,-l0-S+t*.35]],[[cb,-Lt+l0+t*.5],[cb,-Lt+l0+S-t*.35]]]}
+    // the gap between the flights is a closed strip along the whole stair
+    if(g>0)O.push(rc([-g/2,g/2],0,-Lt));walk=walks[0]}
   else{const T=n-1,Y=flightY(),S=-Y[T];O.push([[-w/2,0],[w/2,0],[w/2,-S],[-w/2,-S]]);for(let i=1;i<T;i++)L.push([[-w/2,Y[i]],[w/2,Y[i]],i+1,[0,-1]]);
     walk=[[0,-t*.5],[0,-S+t*.35]];se=[-w/2,w/2];ee={a:[-w/2,-S],b:[w/2,-S],v:[0,-1]}}
   // landings at the bottom (l0, before the first step) and at the top (l1, after the last step); the stair is placed by the outer edge of the bottom landing
