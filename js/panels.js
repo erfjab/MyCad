@@ -124,7 +124,7 @@ function derived(t,o,isSel){
   if(t==='car'){const g=carGeo(o),note={single:'هر واحد پارکینگ ۲٫۵ × ۵ متر است.',pair:'دو واحد کنار هم بدون ستون: ۵ × ۵ متر.',pairc:`فاصله‌ی آزاد بین دو ستون برای دو خودرو حداقل ۴٫۵ متر. الان ${fa(o.clear/1000,2)} متر.`,row3c:`سه خودرو بین دو ستون؛ فاصله‌ی آزاد را طبق ضوابط محل تنظیم کنید. الان ${fa(o.clear/1000,2)} متر.`,row:`${fa(g.nx)} واحد کنار هم، هر کدام ۲٫۵ متر.`,tandem:'پارکینگ مزاحم: دو خودرو پشت سر هم.'}[o.layout];return`${note}<br>ابعاد کل <b>${fa(g.W/1000,2)} × ${fa(g.L/1000,2)} متر</b>، ابعاد خودرو ثابت است`}
   if(t==='window')return`عرض هر لنگه ${cm(o.w/o.panes)} سانت`;
   if(t==='axes'){const g=axesGeo({...o,o:[0,0]});return`${fa(g.X.length)} محور × ${fa(g.Y.length)} محور، ابعاد بین محورها <b>${fmtLen(g.W)} × ${fmtLen(g.Hy)}</b><br>اندازه‌ی ستون‌ها از کارت «ستون» گرفته می‌شود.`}
-  if(t==='elevator')return`مساحت کابین ${fmtArea(o.w*o.d)}`;
+  if(t==='elevator')return`مساحت کابین ${fmtArea(o.w*o.d)}`+(o.wt?`، ابعاد کل با دیوار <b>${fmtLen(o.w+2*o.wt)} × ${fmtLen(o.d+2*o.wt)}</b>`:'');
   if(t==='furn')return`${FURN[o.kind].n}، <b>${cm(o.w)} × ${cm(o.d)} سانت</b>`;
   if(t==='cut'&&o.mode==='trim')return'تکه‌ی بین نزدیک‌ترین دیوارها یا خط‌های متقاطع حذف می‌شود.';
   return''}

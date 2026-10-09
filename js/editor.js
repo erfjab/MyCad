@@ -14,7 +14,7 @@ const angDeg=(a,b)=>Math.round((Math.atan2(b[1]-a[1],b[0]-a[0])*R2D+360)%360);
 const tolPx=()=>ptype==='touch'?24:12;
 const mob=()=>W<760;
 function readColors(){const cs=getComputedStyle(app);['bg','ink','mute','acc','warn','grid','grid2','furn'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim())}
-function dims(e){switch(e.t){case'elevator':return[e.w,e.d];case'column':return[e.w,e.d];case'furn':return[e.w,e.d];case'stairs':return stairDims(e);case'shape':return[e.w,e.d];case'car':{const g=carGeo(e);return[g.W,g.L]}case'door':return[e.w,e.th+2*(e.leaves===2?Math.max(e.w1,e.w2):e.w)];case'window':return[e.w,e.th]}return[0,0]}
+function dims(e){switch(e.t){case'elevator':return[e.w+2*(e.wt||0),e.d+2*(e.wt||0)];case'column':return[e.w,e.d];case'furn':return[e.w,e.d];case'stairs':return stairDims(e);case'shape':return[e.w,e.d];case'car':{const g=carGeo(e);return[g.W,g.L]}case'door':return[e.w,e.th+2*(e.leaves===2?Math.max(e.w1,e.w2):e.w)];case'window':return[e.w,e.th]}return[0,0]}
 const layOf=e=>e.lay||LAYER_OF[e.t],vis=e=>!hidden.has(layOf(e));
 const isPath=e=>e.t==='wall'||e.t==='line';
 const dimPts=e=>{const L=dist(e.a,e.b)||1,n=[-(e.b[1]-e.a[1])/L,(e.b[0]-e.a[0])/L];return[[e.a[0]+n[0]*e.off,e.a[1]+n[1]*e.off],[e.b[0]+n[0]*e.off,e.b[1]+n[1]*e.off],n]};
@@ -89,7 +89,12 @@ function drawItem(e,col,alpha){ctx.save();ctx.globalAlpha=alpha||1;ctx.strokeSty
     if(e.t==='furn')furnShape(e.kind,e.w,e.d);
     else if(e.t==='door'){const h=e.th,a=(e.swing||90)/R2D;ctx.fillStyle=C.bg;ctx.fillRect(-w/2,-h/2-3/s,w,h+6/s);ctx.scale(e.flip?-1:1,e.side||1);lw(1.3);ctx.beginPath();ctx.moveTo(-w/2,-h/2);ctx.lineTo(-w/2,h/2);ctx.moveTo(w/2,-h/2);ctx.lineTo(w/2,h/2);ctx.stroke();if(e.leaves===2){leaf(-w/2,-h/2,e.w1,a,1);leaf(w/2,-h/2,e.w2,a,-1)}else leaf(-w/2,-h/2,w,a,1)}
     else if(e.t==='window'){const h=e.th,n=e.panes||1;ctx.fillStyle=C.bg;ctx.fillRect(-w/2,-h/2-3/s,w,h+6/s);lw(1.3);ctx.strokeRect(-w/2,-h/2,w,h);lw(1);ctx.beginPath();ctx.moveTo(-w/2,0);ctx.lineTo(w/2,0);for(let i=1;i<n;i++){const x=-w/2+i*w/n;ctx.moveTo(x,-h/2);ctx.lineTo(x,h/2)}ctx.stroke()}
-    else if(e.t==='elevator'){const d=e.d;ctx.fillStyle=C.bg;ctx.fillRect(-w/2,-d/2,w,d);lw(1.4);ctx.strokeRect(-w/2,-d/2,w,d);const iw=w/2-100,id=d/2-100;lw(1);ctx.strokeRect(-iw,-id,2*iw,2*id);ctx.beginPath();ctx.moveTo(-iw,-id);ctx.lineTo(iw,id);ctx.moveTo(iw,-id);ctx.lineTo(-iw,id);ctx.stroke();lw(3);ctx.beginPath();ctx.moveTo(-e.dw/2,d/2);ctx.lineTo(e.dw/2,d/2);ctx.stroke()}
+    else if(e.t==='elevator'){// cabin, shaft wall of thickness wt all round with an opening for the door, door on side ds (b/t/r/l of the local frame)
+      const d=e.d,t2=e.wt||0,ds=e.ds||'b',sd=ds==='l'||ds==='r',dw=Math.min(e.dw,sd?d:w);ctx.fillStyle=C.bg;ctx.fillRect(-w/2,-d/2,w,d);
+      if(t2){ctx.fillStyle=col;ctx.beginPath();ctx.rect(-w/2-t2,-d/2-t2,w+2*t2,d+2*t2);ctx.rect(-w/2,-d/2,w,d);ctx.fill('evenodd');ctx.fillStyle=C.bg;
+        if(ds==='b')ctx.fillRect(-dw/2,d/2-1,dw,t2+2);else if(ds==='t')ctx.fillRect(-dw/2,-d/2-t2-1,dw,t2+2);else if(ds==='r')ctx.fillRect(w/2-1,-dw/2,t2+2,dw);else ctx.fillRect(-w/2-t2-1,-dw/2,t2+2,dw)}
+      lw(1.4);ctx.strokeRect(-w/2,-d/2,w,d);const iw=w/2-100,id=d/2-100;lw(1);ctx.strokeRect(-iw,-id,2*iw,2*id);ctx.beginPath();ctx.moveTo(-iw,-id);ctx.lineTo(iw,id);ctx.moveTo(iw,-id);ctx.lineTo(-iw,id);ctx.stroke();
+      lw(3);ctx.beginPath();if(sd){const x=ds==='r'?w/2:-w/2;ctx.moveTo(x,-dw/2);ctx.lineTo(x,dw/2)}else{const y=ds==='b'?d/2:-d/2;ctx.moveTo(-dw/2,y);ctx.lineTo(dw/2,y)}ctx.stroke()}
     else if(e.t==='stairs'){const G=stairGeo(e),poly=P=>{ctx.beginPath();P.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath()},seg=l=>{ctx.moveTo(l[0][0],l[0][1]);ctx.lineTo(l[1][0],l[1][1])},kc=e.cut?G.kc:1e9;
       ctx.fillStyle=C.bg;G.O.forEach(P=>{poly(P);ctx.fill()});if(G.full&&G.core){ctx.beginPath();ctx.arc(G.core.c[0],G.core.c[1],G.core.r+e.w,0,TAU);ctx.fill()}
       lw(1);ctx.beginPath();G.L.filter(l=>l[2]<=kc).forEach(seg);ctx.stroke();
@@ -431,7 +436,8 @@ function xformEnt(src,T){const e=JSON.parse(JSON.stringify(src));delete e.join;c
   if(T.k&&e.t==='axes'){e.xs=e.xs.map(v=>Math.round(v*T.k));e.ys=e.ys.map(v=>Math.round(v*T.k));e.ext=Math.round((e.ext||1500)*T.k);e.bub=Math.round((e.bub||700)*T.k)}
   if(T.mir!=null&&e.t==='axes'){e.ang=nA(2*T.mir-(e.ang||0));e.sy=-(e.sy||1)}
   if(T.rot!=null&&(e.c||e.o))e.ang=nA((e.ang||0)+T.rot);
-  if(T.k){for(const q of['w','d','w1','w2','dw','th','tread','ld','gap','size','sp'])if(typeof e[q]==='number')e[q]=Math.round(e[q]*T.k);if(e.t==='dim')e.off=Math.round(e.off*T.k)}
+  if(T.k){for(const q of['w','d','w1','w2','dw','th','tread','ld','gap','size','sp','wt','l0','l1','d1','d2','d3'])if(typeof e[q]==='number')e[q]=Math.round(e[q]*T.k);if(e.t==='dim')e.off=Math.round(e.off*T.k)}
+  if(T.mir!=null&&e.t==='elevator'&&(e.ds==='l'||e.ds==='r'))e.ds=e.ds==='l'?'r':'l';
   if(T.mir!=null){const f=T.mir;if(e.t==='dim')e.off=-e.off;
     if(e.c&&e.t!=='text'){if(e.t==='door'){e.ang=nA(2*f-(e.ang||0));e.side=-(e.side||1)}else{e.ang=nA(2*f-(e.ang||0)+Math.PI);if(e.t==='stairs'&&e.kind!=='straight')e.turn=-(e.turn||1)}}}
   return e}
@@ -530,7 +536,11 @@ function pvScene(type,o){const E=[],D=[],N=[],Dm_=(k,a,b,off)=>D.push({k,a,b,off
   else{const e={t:type,...o,c:[0,0],ang:0};E.push(e);const[w,d]=dims(e);
     if(type==='stairs'){const G=stairGeo(e);Dm_('w',[-w/2,-d/2],[w/2,-d/2],-450);Dm_('n',[w/2,-d/2],[w/2,d/2],-450);const l=G.L.filter(l=>l[3][1]===-1);if(l.length>1&&o.kind!=='spiral'){const m=x=>[(x[0][0]+x[1][0])/2,-(x[0][1]+x[1][1])/2];Dm_('tread',m(l[0]),m(l[1]),0)}
       if(o.kind==='u'){const P=G.O[0],x=Math.min(...P.map(p=>p[0]));Dm_('ld',[x,-P[0][1]],[x,-P[3][1]],-450)}}
-    else if(type==='elevator'){Dm_('dw',[-o.dw/2,-d/2],[o.dw/2,-d/2],-300);Dm_('w',[-w/2,-d/2],[w/2,-d/2],-900);Dm_('d',[w/2,-d/2],[w/2,d/2],-400)}
+    else if(type==='elevator'){const cw=o.w,cd=o.d,t2=o.wt||0,dw=o.dw,ds=o.ds||'b',g=t2+350;
+      const dr={b:[[-dw/2,-cd/2],[dw/2,-cd/2]],t:[[dw/2,cd/2],[-dw/2,cd/2]],r:[[cw/2,-dw/2],[cw/2,dw/2]],l:[[-cw/2,dw/2],[-cw/2,-dw/2]]}[ds];Dm_('dw',dr[0],dr[1],-g);
+      if(ds==='t')Dm_('w',[-cw/2,-cd/2],[cw/2,-cd/2],-g);else Dm_('w',[-cw/2,cd/2],[cw/2,cd/2],g);
+      if(ds==='l')Dm_('d',[cw/2,-cd/2],[cw/2,cd/2],-g);else Dm_('d',[-cw/2,-cd/2],[-cw/2,cd/2],g);
+      if(t2){if(ds==='r')Dm_('wt',[-cw/2-t2,0],[-cw/2,0],0);else Dm_('wt',[cw/2,0],[cw/2+t2,0],0)}}
     else if(type==='car'){Dm_(o.layout==='pairc'||o.layout==='row3c'?'clear':'n',[-w/2,-d/2],[w/2,-d/2],-500);Dm_('_L',[w/2,-d/2],[w/2,d/2],-500)}
     else{Dm_('w',[-w/2,-d/2],[w/2,-d/2],-450);Dm_('d',[w/2,-d/2],[w/2,d/2],-450)}}
   return{E,D,N}}

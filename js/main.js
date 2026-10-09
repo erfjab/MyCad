@@ -73,7 +73,9 @@ document.addEventListener('keydown',ev=>{if(ev.key==='Shift'&&(tool!=='select'||
   const map={KeyV:'select',KeyW:'wall',KeyL:'line',KeyD:'door',KeyN:'window',KeyE:'elevator',KeyS:'stairs',KeyP:'car',KeyO:'column',KeyI:'furn',KeyX:'cut',KeyH:'hatch',KeyT:'text',KeyM:'measure',KeyG:'axes',KeyC:'shape'};
   if(map[ev.code]){setTool(map[ev.code]);ev.preventDefault();return}
   if(ev.code==='KeyR'){if(tool==='select'&&canTurn())rotateSel();else if(DEF[tool]&&'ang'in DEF[tool])apply(tool,null,{ang:((DEF[tool].ang||0)+H)%TAU});ev.preventDefault();return}
-  if(ev.code==='KeyF'){if(sel&&sel.t==='door')apply('door',sel,{flip:!sel.flip});else if(tool==='door')apply('door',null,{flip:!DEF.door.flip});return}
+  if(ev.code==='KeyF'){if(sel&&sel.t==='door')apply('door',sel,{flip:!sel.flip});else if(tool==='door')apply('door',null,{flip:!DEF.door.flip});
+    // F also turns an elevator door to the next side
+    else if((sel&&sel.t==='elevator')||tool==='elevator'){const tg=sel&&sel.t==='elevator'?sel:null,o=tg||DEF.elevator,nx={b:'r',r:'t',t:'l',l:'b'}[o.ds||'b'];apply('elevator',tg,{ds:nx})}return}
   if(ev.key==='Enter'){if(isMod())cmdEnter();else if(drafting())finishDraft();return}
   if(ev.key==='Escape'){esc();return}
   if((ev.key==='Delete'||ev.key==='Backspace')&&selSet.size){delMany([...selSet]);draw();ev.preventDefault()}});
