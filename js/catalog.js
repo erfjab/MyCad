@@ -89,13 +89,13 @@ const FIELDS={
   car:[{k:'n',l:'تعداد خودرو',type:'num',u:'عدد',min:2,max:12,step:1,when:o=>o.layout==='row'},{k:'clear',l:'فاصله‌ی آزاد ستون‌ها',type:'num',u:'cm',min:2500,max:9000,step:50,when:o=>o.layout==='pairc'||o.layout==='row3c'},ROT],
   column:[{k:'w',l:'عرض',type:'num',u:'cm',min:100,max:2000,step:10},{k:'d',l:'عمق',type:'num',u:'cm',min:100,max:2000,step:10},{k:'round',l:'شکل',type:'seg',opts:[['چهارگوش',0],['گرد',1]]},ROT],
   furn:[{k:'w',l:'عرض',type:'num',u:'cm',min:200,max:6000,step:10},{k:'d',l:'عمق',type:'num',u:'cm',min:200,max:6000,step:10},ROT],
-  cut:[{k:'mode',l:'روش برش',type:'seg',opts:[['دو نقطه','points'],['بازشو','gap'],['حذف تکه','trim']]},{k:'gw',l:'عرض بازشو',type:'num',u:'cm',min:100,max:8000,step:50,when:o=>o.mode==='gap'}],
+  cut:[{k:'mode',l:'روش برش',type:'seg',opts:[['حذف تکه','trim'],['دو نقطه','points'],['بازشو','gap']]},{k:'gw',l:'عرض بازشو',type:'num',u:'cm',min:100,max:8000,step:50,when:o=>o.mode==='gap'}],
   hatch:[{k:'mode',l:'محدوده',type:'seg',opts:[['مستطیل','rect'],['چندضلعی','poly'],['انتخاب اتاق','room']],tool:1},{k:'sp',l:'فاصله',type:'num',u:'cm',min:50,max:5000,step:50,when:o=>o.pat!=='solid'},{k:'ang',l:'زاویه',type:'num',u:'°',min:0,max:179,step:15,when:o=>o.pat!=='solid'}],
   text:[{k:'str',l:'متن',type:'text'},{k:'sub',l:'زیرنویس (مثلاً مساحت)',type:'text'},{k:'size',l:'ارتفاع حروف',type:'num',u:'cm',min:50,max:3000,step:10},{k:'bold',l:'وزن',type:'seg',opts:[['معمولی',0],['ضخیم',1]]},ROT],
   dim:[{k:'off',l:'فاصله‌ی خط اندازه',type:'num',u:'cm',min:-20000,max:20000,step:50}]
 };
 const DEF={wall:{shape:'straight',th:200,h:3000},line:{shape:'straight',dash:'solid',lw:2},door:{leaves:1,w:900,w1:800,w2:800,h:2100,swing:90,flip:false},window:{w:1500,sill:900,panes:2},elevator:{w:1600,d:1400,dw:900,ang:0},
-  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'gap',gw:900},
+  stairs:{kind:'u',w:1100,tread:280,floorH:3200,n:19,n1:10,ld:1100,gap:100,turn:1,sweep:330,dir:'up',cut:1,ang:0},shape:{kind:'rect',as:'line',th:200,sides:6,dash:'solid',lw:2,fill:0},car:{layout:'single',n:3,clear:4500,ang:0},column:{w:400,d:400,round:0,ang:0},furn:{kind:'sofa3',w:2100,d:900,ang:0},cut:{mode:'trim',gw:900},
   hatch:{mode:'room',pat:'grid',sp:600,ang:0},text:{str:'اتاق',sub:'',size:350,bold:1,ang:0},measure:{mode:'dist'}};
 let furnCat='living';
 const ROOMS=['نشیمن','پذیرایی','آشپزخانه','اتاق خواب','حمام','سرویس','راهرو','انباری','بالکن','پارکینگ','لابی','دفتر'];
@@ -106,7 +106,7 @@ function hintFor(t){const o=DEF[t]||{};return({select:'روی المان‌ها 
   door:'روی دیوار کلیک کنید. در به سمتی باز می‌شود که نشانگر آن‌جاست. F لولا را عوض می‌کند.',window:'روی دیوار کلیک کنید.',elevator:'برای گذاشتن کلیک کنید. R نود درجه می‌چرخاند.',stairs:'جای اولین پله را بزنید، بعد نشانگر را به سمتی که پله بالا می‌رود ببرید و دوباره بزنید. تعداد و ارتفاع پله‌ها از روی ارتفاع طبقه حساب می‌شود.',
   shape:{rect:'یک گوشه و بعد گوشه‌ی مقابل را بزنید.',square:'یک گوشه و بعد گوشه‌ی مقابل را بزنید؛ ضلع‌ها برابر می‌مانند.',circle:'مرکز را بزنید، بعد نقطه‌ای روی محیط.',ellipse:'دو گوشه‌ی کادر دور بیضی را بزنید.',poly:'مرکز را بزنید، بعد جای یکی از رأس‌ها.'}[DEF.shape.kind],
   car:'برای گذاشتن کلیک کنید. ابعاد هر واحد ثابت است. R می‌چرخاند.',column:'برای گذاشتن کلیک کنید.',furn:'یک المان انتخاب کنید و روی نقشه کلیک کنید. R می‌چرخاند.',
-  cut:{points:'روی دیوار، نقطه‌ی شروع برش و بعد پایان آن را بزنید.',gap:'روی دیوار بزنید تا بازشویی به این عرض بریده شود.',trim:'نشانگر را روی تکه‌ی بین دو تقاطع ببرید و بزنید تا حذف شود.'}[o.mode],
+  cut:{points:'روی دیوار، نقطه‌ی شروع برش و بعد پایان آن را بزنید.',gap:'روی دیوار بزنید تا بازشویی به این عرض بریده شود.',trim:'روی تکه‌ی اضافه بزنید تا تا اولین تقاطع حذف شود، یا مثل اتوکد خطی از روی چند تکه بکشید تا همه با هم حذف شوند. با دیوار، خط و شکل‌ها کار می‌کند.'}[o.mode],
   hatch:{rect:'دو گوشه‌ی مقابل را بزنید.',poly:'گوشه‌ها را بزنید و با دوبار کلیک یا «پایان» ببندید.',room:'داخل یک اتاق بزنید تا کفش پر شود.'}[o.mode],
   text:'جای متن را روی نقشه بزنید.',
   measure:{dist:'دو نقطه را بزنید.',path:'نقاط مسیر را بزنید و با دوبار کلیک یا «پایان» تمام کنید.',area:'گوشه‌های محدوده را بزنید و با دوبار کلیک یا «پایان» ببندید.',room:'داخل اتاق بزنید تا مساحت و ابعادش را ببینید.',angle:'نقطه‌ی اول، رأس زاویه و نقطه‌ی دوم را بزنید.',dim:'دو نقطه را بزنید، بعد جای خط اندازه را.'}[DEF.measure.mode]})[t]}

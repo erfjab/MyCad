@@ -34,7 +34,7 @@ function toolsInit(){const bar=$('[data-tools]');GROUPS.forEach((g,i)=>{if(GBREA
   bar.addEventListener('scroll',()=>{const pop=$('[data-rpop]');if(!pop.classList.contains('shut')){const a=$('[data-tools] .ib.po');if(a)place(pop,a,'r')}},{passive:true})}
 function refresh(){rightUI();leftUI();$('[data-act="paste"]').hidden=!clip}
 function setTool(t){if(t===tool&&(t!=='select'||selSet.size)){rOpen=!rOpen;if(rOpen&&mob())lPane=null;refresh();return}
-  if(drafting())finishDraft();tool=t;gCur[gOf(t)]=t;syncBar();pvKey=null;pts=[];chainStart=null;cutA=null;snapPt=null;ghost=null;meas=null;selBox=null;dynLock={};if(t!=='select')setSel([]);rOpen=t!=='select';if(mob())lPane=null;canvas.style.cursor=t==='select'?'default':'crosshair';updateGhost();refresh();draw()}
+  if(drafting())finishDraft();tool=t;gCur[gOf(t)]=t;syncBar();pvKey=null;pts=[];chainStart=null;cutA=null;snapPt=null;ghost=null;meas=null;selBox=null;fence=null;dynLock={};if(t!=='select')setSel([]);rOpen=t!=='select';if(mob())lPane=null;canvas.style.cursor=t==='select'?'default':'crosshair';updateGhost();refresh();draw()}
 // Esc drops everything at once (drawing in progress, selection box, measurement, selection) and goes back to the select tool; pressed again with nothing going on, it closes the cards
-function esc(){if(gripDrag){unmove();draw();return}const busy=selBox||drafting()||meas||selSet.size||tool!=='select';dynLock={};selBox=null;pts=[];chainStart=null;cutA=null;meas=null;setSel([]);
+function esc(){fence=null;if(gripDrag){unmove();draw();return}const busy=selBox||drafting()||meas||selSet.size||tool!=='select';dynLock={};selBox=null;pts=[];chainStart=null;cutA=null;meas=null;setSel([]);
   if(busy){if(tool!=='select')setTool('select');rOpen=false}else{rOpen=false;lPane=null}refresh();draw()}

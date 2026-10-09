@@ -3,7 +3,7 @@ const cvEl=$('.cv'),canvas=cvEl.querySelector('canvas'),mainCtx=canvas.getContex
 let W=0,Hh=0,s=.05,s0=.05,ox=0,oy=0,fitted=false,C={};
 let tool='select',pts=[],chainStart=null,mouse=null,snapPt=null,ghost=null,sel=null,meas=null,cutA=null,drag=null,moving=null,ptype='mouse',lastTap=0;
 // selSet holds everything selected; sel is that one entity when exactly one is selected (the card edits it), otherwise null
-let selVer=0,selSet=new Set(),selBox=null,dynLock={},gripDrag=null,gripHot=null;
+let fence=null,selVer=0,selSet=new Set(),selBox=null,dynLock={},gripDrag=null,gripHot=null;
 function setSel(list){selVer++;selSet=new Set((list||[]).filter(Boolean));sel=selSet.size===1?[...selSet][0]:null;if(!selSet.size&&tool==='select')rOpen=false}
 function unpick(e){selVer++;if(selSet.delete(e))sel=selSet.size===1?[...selSet][0]:null}
 const picked=e=>selSet.has(e);
@@ -157,10 +157,11 @@ function drawPreview(){const m=mouse||(ptype==='touch'&&dynFields()&&Object.keys
     if(o.mode==='room')Pp=roomAt(m);else if(o.mode==='rect'&&pts.length){const b=q();Pp=[pts[0],[b[0],pts[0][1]],b,[pts[0][0],b[1]]]}else if(o.mode==='poly'&&pts.length)Pp=[...pts,q()];
     if(Pp&&Pp.length>=2)drawHatch({poly:Pp,pat:o.pat,sp:o.sp,ang:o.ang},C.acc,C.acc,.8)}
   else if(tool==='cut'){const o=DEF.cut;
-    if(o.mode==='points'&&cutA){const r=locate(cutA.e.pts,m),a=Math.min(cutA.s,r.s),b=Math.max(cutA.s,r.s);cutStroke(cutA.e,slice(cutA.e.pts,a,b));markX(pointAt(cutA.e.pts,cutA.s));markX(r.pt);return}
-    const w=nearestPath(m);if(!w)return;const r=locate(w.pts,m),L=plen(w.pts);
-    if(o.mode==='gap'){const a=Math.max(0,r.s-o.gw/2),b=Math.min(L,r.s+o.gw/2);cutStroke(w,slice(w.pts,a,b))}
-    else if(o.mode==='trim'){const[a,b]=trimRange(w,r.s);cutStroke(w,slice(w.pts,a,b))}
+    if(fence&&fence.moved){fenceCuts(fence.a,fence.b).forEach(([e,R])=>R.forEach(([a,b])=>cutStroke(e,rangePts(polyOf(e),a,b))));const A=toS(fence.a),B=toS(fence.b);ctx.save();ctx.strokeStyle=C.warn;ctx.lineWidth=1.5;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(...A);ctx.lineTo(...B);ctx.stroke();ctx.restore();return}
+    if(o.mode==='points'&&cutA){const P=polyOf(cutA.e),r=locate(P,m),a=Math.min(cutA.s,r.s),b=Math.max(cutA.s,r.s);cutStroke(cutA.e,slice(P,a,b));markX(pointAt(P,cutA.s));markX(r.pt);return}
+    const w=nearestPath(m);if(!w)return;const P=polyOf(w),r=locate(P,m),L=plen(P);
+    if(o.mode==='gap'){const a=Math.max(0,r.s-o.gw/2),b=Math.min(L,r.s+o.gw/2);cutStroke(w,slice(P,a,b))}
+    else if(o.mode==='trim'){const[a,b]=trimRange(w,r.s);cutStroke(w,rangePts(P,a,b))}
     else markX(r.pt)}
   else if(tool==='text'&&ptype!=='touch')drawText({...DEF.text,c:q()},C.acc,.6);
   else if(tool==='shape'){const o=DEF.shape;if(!pts.length){if(!snapPt){const Q=toS(q());ctx.fillStyle=C.acc;ctx.beginPath();ctx.arc(Q[0],Q[1],3.5,0,7);ctx.fill()}return}
@@ -198,7 +199,13 @@ const gridSnap=p=>opt.snap?[Math.round(p[0]/50)*50,Math.round(p[1]/50)*50]:p.sli
 function endpointSnap(p,skip){if(!opt.snap)return null;let best=null,bd=tolPx()/s;for(const e of ents())if(isPath(e)&&vis(e)&&e!==skip)for(const q of[e.pts[0],e.pts[e.pts.length-1]]){const d=dist(p,q);if(d<bd){bd=d;best=q}}return best?best.slice():null}
 function pathPt(m){let p=gridSnap(m);const o=DEF[tool];if(pts.length&&o&&o.shape==='straight'){const a0=pts[0],dx=p[0]-a0[0],dy=p[1]-a0[1],a=Math.atan2(dy,dx),q=Math.round(a/H)*H;if(Math.abs(a-q)<.1){const L=Math.hypot(dx,dy);p=gridSnap([a0[0]+Math.round(Math.cos(q))*L,a0[1]+Math.round(Math.sin(q))*L])}}return p}
 function nearestWall(p){let best=null,bd=1e12;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;const r=locate(e.pts,p),d=r.d-e.th/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
-function nearestPath(p){let best=null,bd=1e12;for(const e of ents()){if(!isPath(e)||!vis(e)||locked.has(layOf(e)))continue;const d=locate(e.pts,p).d-(e.th||0)/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
+// cutting works on walls, lines and shapes (a shape is cut along its outline and what is left becomes lines, like an AutoCAD polyline)
+const cuttable=e=>isPath(e)||e.t==='shape';
+function polyOf(e){if(isPath(e))return e.pts;const P=shapePts(e);return[...P,P[0]]}
+const isLoop=e=>e.t==='shape'||!!e.closed||(isPath(e)&&e.pts.length>3&&dist(e.pts[0],e.pts[e.pts.length-1])<1);
+// points of P from a to b along its length; on a loop a>b wraps through the start
+function rangePts(P,a,b){if(a<=b)return slice(P,a,b);return[...slice(P,a,plen(P)),...slice(P,0,b).slice(1)]}
+function nearestPath(p){let best=null,bd=1e12;for(const e of ents()){if(!cuttable(e)||!vis(e)||locked.has(layOf(e)))continue;const d=locate(polyOf(e),p).d-(e.th||0)/2;if(d<bd){bd=d;best=e}}return bd<tolPx()/s?best:null}
 function toLocal(e,p){const dx=p[0]-e.c[0],dy=p[1]-e.c[1],c=Math.cos(e.ang||0),sn=Math.sin(e.ang||0);return[dx*c+dy*sn,-dx*sn+dy*c]}
 function hit(p){const tol=tolPx()/s*.6,ok=e=>vis(e)&&!locked.has(layOf(e));let pick=null;
   for(const e of ents()){if(!ok(e)||e.t!=='dim')continue;const[A,B]=dimPts(e);if(segD(p,A,B)<=tol*1.3)pick=e}if(pick)return pick;
@@ -209,8 +216,14 @@ function hit(p){const tol=tolPx()/s*.6,ok=e=>vis(e)&&!locked.has(layOf(e));let p
   for(const e of ents()){if(ok(e)&&e.t==='hatch'&&inPoly(p,e.poly))pick=e}return pick}
 function roomAt(p){const dirs=[[1,0],[-1,0],[0,1],[0,-1]],h=[];for(const d of dirs){let best=1e12,th=0;for(const e of ents()){if(e.t!=='wall'||!vis(e))continue;for(let i=1;i<e.pts.length;i++){const t=rayInt(p,d,e.pts[i-1],e.pts[i]);if(t!=null&&t<best){best=t;th=e.th}}}if(best>1e11)return null;h.push(best-th/2)}
   if(h.some(v=>v<=0))return null;return[[p[0]-h[1],p[1]-h[3]],[p[0]+h[0],p[1]-h[3]],[p[0]+h[0],p[1]+h[2]],[p[0]-h[1],p[1]+h[2]]]}
-function crossings(e){const A=e.pts,out=[];let acc=0;for(let i=1;i<A.length;i++){const L=dist(A[i-1],A[i]);for(const o of ents()){if(o===e||!isPath(o)||!vis(o))continue;const B=o.pts;for(let j=1;j<B.length;j++){const t=segInt(A[i-1],A[i],B[j-1],B[j]);if(t!=null)out.push(acc+t*L)}}acc+=L}return out}
-function trimRange(e,sv){const L=plen(e.pts),v=[0,...crossings(e).filter(x=>x>1&&x<L-1).sort((a,b)=>a-b),L];for(let i=0;i<v.length-1;i++)if(sv>=v[i]&&sv<=v[i+1])return[v[i],v[i+1]];return[0,L]}
+function crossings(e){const A=polyOf(e),out=[];let acc=0;for(let i=1;i<A.length;i++){const L=dist(A[i-1],A[i]);for(const o of ents()){if(o===e||!cuttable(o)||!vis(o))continue;const B=polyOf(o);for(let j=1;j<B.length;j++){const t=segInt(A[i-1],A[i],B[j-1],B[j]);if(t!=null)out.push(acc+t*L)}}acc+=L}return out}
+// the piece between the nearest crossings on either side of sv; on a loop the piece around the start wraps (a>b)
+function trimRange(e,sv){const L=plen(polyOf(e)),c=crossings(e).filter(x=>x>1&&x<L-1).sort((a,b)=>a-b);if(!c.length)return[0,L];
+  if(isLoop(e)&&(sv<c[0]||sv>c[c.length-1]))return c.length>1?[c[c.length-1],c[0]]:[0,L];const v=[0,...c,L];for(let i=0;i<v.length-1;i++)if(sv>=v[i]&&sv<=v[i+1])return[v[i],v[i+1]];return[0,L]}
+// AutoCAD-style fence trim: every piece the dragged line passes over is removed
+function fenceCuts(A,B){const out=[];for(const e of ents()){if(!cuttable(e)||!vis(e)||locked.has(layOf(e)))continue;const P=polyOf(e),R=[];let acc=0;
+  for(let i=1;i<P.length;i++){const Ls=dist(P[i-1],P[i]),t=segInt(P[i-1],P[i],A,B);if(t!=null){const r=trimRange(e,acc+t*Ls);if(!R.some(q=>Math.abs(q[0]-r[0])<1&&Math.abs(q[1]-r[1])<1))R.push(r)}acc+=Ls}if(R.length)out.push([e,R])}return out}
+function fenceTrim(A,B){const list=fenceCuts(A,B).map(([e,R])=>[e,cutRanges(e,R)]).filter(x=>x[1]);if(!list.length){flash('خط برش از روی چیزی رد نشد.');return}replaceMany(list);draw()}
 // ---------- grips: handles on the selected items, dragged to reshape them like AutoCAD ----------
 // corners resize boxes (the opposite corner stays put); vertices move the corners of walls, lines and hatches; the two ends move a dimension
 const BOXY=e=>!!e.c&&(e.t==='shape'||e.t==='furn'||e.t==='column'||e.t==='elevator');
@@ -300,7 +313,9 @@ function addMany(list){const L=ents();commit(()=>list.forEach(e=>L.push(e)),()=>
 const addEnt=e=>addMany([e]);
 function delMany(list){const L=ents(),idx=list.map(e=>L.indexOf(e));commit(()=>list.forEach(e=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1);unpick(e)}),()=>list.map((e,k)=>[e,idx[k]]).sort((a,b)=>a[1]-b[1]).forEach(([e,i])=>L.splice(Math.min(i,L.length),0,e)));refresh()}
 const delEnt=e=>delMany([e]);
-function replaceEnt(e,parts){const L=ents(),i=L.indexOf(e);commit(()=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1,...parts);unpick(e)},()=>{const j=L.indexOf(parts[0]);if(parts.length&&j>=0)L.splice(j,parts.length,e);else L.splice(i,0,e)});refresh()}
+// swap several entities for their pieces in one undo step: list is [[entity, pieces], ...]
+function replaceMany(list){const L=ents();let idx=[];commit(()=>{idx=list.map(([e])=>L.indexOf(e));list.forEach(([e,parts])=>{const j=L.indexOf(e);if(j>=0)L.splice(j,1,...parts);unpick(e)})},()=>{for(let k=list.length-1;k>=0;k--){const[e,parts]=list[k],j=parts.length?L.indexOf(parts[0]):-1;if(j>=0)L.splice(j,parts.length,e);else L.splice(Math.min(idx[k],L.length),0,e)}});refresh()}
+const replaceEnt=(e,parts)=>replaceMany([[e,parts]]);
 function setProps(e,patch){const old={};for(const k in patch)old[k]=e[k];commit(()=>Object.assign(e,patch),()=>Object.assign(e,old))}
 function undo(){const a=hist().undo.pop();if(!a)return;a.undoFn();hist().redo.push(a);computeJoins();refresh();draw();markDirty()}
 function redo(){const a=hist().redo.pop();if(!a)return;a.doFn();hist().undo.push(a);computeJoins();refresh();draw();markDirty()}
@@ -308,7 +323,14 @@ const geomOf=e=>JSON.parse(JSON.stringify({c:e.c,pts:e.pts,poly:e.poly,a:e.a,b:e
 const mv=(p,d)=>[p[0]+d[0],p[1]+d[1]];
 function setGeom(e,g,d){if(g.c)e.c=mv(g.c,d);if(g.pts)e.pts=g.pts.map(p=>mv(p,d));if(g.poly)e.poly=g.poly.map(p=>mv(p,d));if(g.a){e.a=mv(g.a,d);e.b=mv(g.b,d)}}
 function duplicate(list){const cp=[].concat(list).map(e=>{const c=JSON.parse(JSON.stringify(e));delete c.join;setGeom(c,geomOf(c),[600,-600]);return c});addMany(cp);setSel(cp);refresh();draw()}
-function cutWall(e,a,b){const L=plen(e.pts);if(b-a<1)return;const parts=[];if(a>1)parts.push({...e,pts:slice(e.pts,0,a)});if(b<L-1)parts.push({...e,pts:slice(e.pts,b,L)});parts.forEach(p=>delete p.join);replaceEnt(e,parts)}
+// what is left of e after removing the ranges R ([a,b], a>b wraps on a loop); walls stay walls, shapes become lines. null if nothing is removed
+function cutRanges(e,R){const P=polyOf(e),L=plen(P),iv=[];for(const[a,b]of R){if(a<=b)iv.push([a,b]);else iv.push([a,L],[0,b])}
+  iv.sort((x,y)=>x[0]-y[0]);const m=[];for(const r of iv){const l=m[m.length-1];if(l&&r[0]<=l[1]+1)l[1]=Math.max(l[1],r[1]);else m.push(r.slice())}
+  if(!m.some(r=>r[1]-r[0]>=1))return null;const keep=[];let x=0;for(const[a,b]of m){if(a-x>1)keep.push([x,a]);x=Math.max(x,b)}if(L-x>1)keep.push([x,L]);
+  if(isLoop(e)&&keep.length>1&&keep[0][0]<1&&keep[keep.length-1][1]>L-1){const f=keep.shift(),l=keep.pop();keep.push([l[0],f[1]])}
+  const base=e.t==='shape'?{t:'line',dash:e.dash||'solid',lw:e.lw||2,kind:'straight'}:(({join,closed,...r})=>r)(e);
+  return keep.map(([a,b])=>({...base,pts:rangePts(P,a,b)}))}
+function cutWall(e,a,b){const parts=cutRanges(e,[[a,b]]);if(parts)replaceEnt(e,parts)}
 function autoDims(){const Ws=ents().filter(e=>e.t==='wall'&&vis(e));if(!Ws.length){flash('دیواری پیدا نشد.');return}let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;Ws.forEach(e=>e.pts.forEach(p=>{x0=Math.min(x0,p[0]);y0=Math.min(y0,p[1]);x1=Math.max(x1,p[0]);y1=Math.max(y1,p[1])}));
   const g=Math.max(900,Math.max(x1-x0,y1-y0)*.07),uniq=a=>[...new Set(a.map(v=>Math.round(v/10)*10))].sort((p,q)=>p-q),out=[{t:'dim',a:[x0,y0],b:[x1,y0],off:-g*1.8},{t:'dim',a:[x0,y0],b:[x0,y1],off:g*1.8}];
   const ex=[],ey=[];Ws.forEach(e=>[e.pts[0],e.pts[e.pts.length-1]].forEach(p=>{if(Math.abs(p[1]-y0)<5)ex.push(p[0]);if(Math.abs(p[0]-x0)<5)ey.push(p[1])}));
@@ -356,8 +378,8 @@ function act(p,exact){
     else if(o.mode==='rect'){if(!pts.length)pts=[q];else{const a=pts[0];if(Math.abs(q[0]-a[0])>10&&Math.abs(q[1]-a[1])>10)addEnt({t:'hatch',poly:[a,[q[0],a[1]],q,[a[0],q[1]]],pat:o.pat,sp:o.sp,ang:o.ang});pts=[]}}
     else{if(pts.length>=3&&dist(q,pts[0])<tolPx()/s){finishDraft();return}pts.push(q)}refresh();draw();return}
   if(tool==='cut'){
-    if(o.mode==='points'){if(!cutA){const w=nearestPath(p);if(!w){flash('روی یک دیوار یا خط بزنید.');return}cutA={e:w,s:locate(w.pts,p).s}}else{const b=locate(cutA.e.pts,p).s;cutWall(cutA.e,Math.min(cutA.s,b),Math.max(cutA.s,b));cutA=null}refresh();draw();return}
-    const w=nearestPath(p);if(!w){flash('روی یک دیوار یا خط بزنید.');return}const r=locate(w.pts,p),L=plen(w.pts);
+    if(o.mode==='points'){if(!cutA){const w=nearestPath(p);if(!w){flash('روی یک دیوار یا خط بزنید.');return}cutA={e:w,s:locate(polyOf(w),p).s}}else{const b=locate(polyOf(cutA.e),p).s;cutWall(cutA.e,Math.min(cutA.s,b),Math.max(cutA.s,b));cutA=null}refresh();draw();return}
+    const w=nearestPath(p);if(!w){flash('روی یک دیوار یا خط بزنید.');return}const r=locate(polyOf(w),p),L=plen(polyOf(w));
     if(o.mode==='gap')cutWall(w,Math.max(0,r.s-o.gw/2),Math.min(L,r.s+o.gw/2));else{const[a,b]=trimRange(w,r.s);cutWall(w,a,b)}draw()}}
 let toastT=0;function flash(m){const t=$('[data-toast]');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2200)}
 

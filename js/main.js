@@ -18,11 +18,14 @@ canvas.addEventListener('pointerdown',ev=>{const[x,y]=pos(ev);ptype=ev.pointerTy
     // anywhere else a drag draws a selection box, even when it starts on an item; a plain click adds that item (like AutoCAD) or, on empty space, clears the selection
     selBox={a:[x,y],b:[x,y],shift:ev.shiftKey,moved:false,pick:h};return}
   if(ptype==='touch'){drag={x,y,ox,oy,moved:false,tap:true};return}
+  // trim with the mouse: a click removes one piece, a drag removes every piece the line passes over
+  if(tool==='cut'&&DEF.cut.mode==='trim'){fence={a:p,b:p,x,y,moved:false};return}
   hover(x,y);act(p)});
 canvas.addEventListener('pointermove',ev=>{const[x,y]=pos(ev);if(ptrs.has(ev.pointerId))ptrs.set(ev.pointerId,[x,y]);
   if(pinch&&ptrs.size>=2){const[a,b]=[...ptrs.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),m=[(a[0]+b[0])/2,(a[1]+b[1])/2];s=Math.max(.004,Math.min(5,pinch.s*d/pinch.d));const w=[(pinch.m[0]-pinch.ox)/pinch.s,(pinch.oy-pinch.m[1])/pinch.s];ox=m[0]-w[0]*s;oy=m[1]+w[1]*s;draw();return}
   if(gripDrag){const gd=gripDrag;let p=toW(x,y);if(!gd.moved&&Math.hypot(...[0,1].map(i=>toS(gd.g.p)[i]-[x,y][i]))<3)return;gd.moved=true;p=(!BOXY(gd.e)&&endpointSnap(p,gd.e))||gridSnap(p);gripSet(gd.e,gd.g,gd.o,p);if(gd.e.t==='wall')computeJoins();draw();return}
   if(moving){const p=toW(x,y);let d=[p[0]-moving.start[0],p[1]-moving.start[1]];if(!moving.moved&&Math.hypot(d[0],d[1])*s<(ptype==='touch'?10:4))return;moving.moved=true;if(opt.snap)d=d.map(v=>Math.round(v/50)*50);moving.L.forEach((e,i)=>setGeom(e,moving.G[i],d));if(moving.L.some(e=>e.t==='wall'))computeJoins();draw();return}
+  if(fence){fence.b=toW(x,y);mouse=fence.b;if(Math.hypot(x-fence.x,y-fence.y)>4)fence.moved=true;draw();return}
   if(selBox){selBox.b=[x,y];if(Math.hypot(x-selBox.a[0],y-selBox.a[1])>(ptype==='touch'?10:4))selBox.moved=true;draw();return}
   if(drag){if(Math.hypot(x-drag.x,y-drag.y)>(drag.tap?8:3))drag.moved=true;if(drag.moved){ox=drag.ox+x-drag.x;oy=drag.oy+y-drag.y;canvas.style.cursor='grabbing';draw()}return}
   hover(x,y);draw()});
@@ -30,15 +33,16 @@ function up(ev){const[x,y]=pos(ev);ptrs.delete(ev.pointerId);
   if(pinch){if(ptrs.size<2)pinch=null;drag=null;return}
   if(gripDrag){const g=gripDrag;gripDrag=null;if(g.moved){const fin=gripSnap(g.e);commit(()=>gripRestore(g.e,fin),()=>gripRestore(g.e,g.o));refresh()}draw();return}
   if(moving){const m=moving;moving=null;if(m.moved){const F=m.L.map(geomOf);commit(()=>m.L.forEach((e,i)=>setGeom(e,F[i],[0,0])),()=>m.L.forEach((e,i)=>setGeom(e,m.G[i],[0,0])));refresh()}else tapItem(m.tap);draw();return}
+  if(fence){const f=fence;fence=null;if(f.moved)fenceTrim(f.a,toW(x,y));else{hover(x,y);act(f.a)}draw();return}
   if(selBox){const b=selBox;selBox=null;if(b.moved){b.b=[x,y];boxSelect(b)}else if(b.pick){setSel([...selSet,b.pick]);tapItem(b.pick);refresh()}else if(!b.shift){setSel([]);refresh()}draw();return}
   if(drag){const d=drag;drag=null;canvas.style.cursor=tool==='select'?'default':'crosshair';
     if(d.tap&&!d.moved){const p=toW(x,y),now=Date.now();mouse=p;snapPt=['wall','line','measure','hatch','shape'].includes(tool)?endpointSnap(p):null;
       if(now-lastTap<320&&drafting()){lastTap=0;finishDraft();return}lastTap=now;if(mob()&&rOpen&&tool!=='select')rOpen=false;act(p);if(ptype==='touch'){mouse=null;ghost=null;draw()}}}}
-canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',ev=>{ptrs.delete(ev.pointerId);pinch=null;drag=null;if(moving||selBox||gripDrag){unmove();selBox=null;draw()}});
+canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',ev=>{ptrs.delete(ev.pointerId);pinch=null;drag=null;fence=null;if(moving||selBox||gripDrag){unmove();selBox=null;draw()}});
 canvas.addEventListener('dblclick',()=>{if(drafting())finishDraft()});
 // a second click (or tap) on the same item opens its edit card; it no longer opens on its own
 let tapE=null,tapT=0;function tapItem(e){const now=Date.now();if(e&&e===tapE&&now-tapT<400){rOpen=true;if(mob())lPane=null;refresh();tapE=null;return}tapE=e;tapT=now}
-canvas.addEventListener('pointerleave',ev=>{if(!drag&&!moving&&!selBox&&!gripDrag&&ev.pointerType==='mouse'){gripHot=null;mouse=null;ghost=null;snapPt=null;draw()}});
+canvas.addEventListener('pointerleave',ev=>{if(!drag&&!moving&&!selBox&&!gripDrag&&!fence&&ev.pointerType==='mouse'){gripHot=null;mouse=null;ghost=null;snapPt=null;draw()}});
 canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
 canvas.addEventListener('wheel',ev=>{ev.preventDefault();const[x,y]=pos(ev);zoomAt(x,y,Math.exp(-ev.deltaY*.0015))},{passive:false});
 let lastW=0;new ResizeObserver(()=>{const r=cvEl.getBoundingClientRect();if(!r.width)return;const crossed=lastW&&((lastW<760)!==(r.width<760));W=r.width;Hh=r.height;lastW=W;const d=devicePixelRatio||1;canvas.width=Math.round(W*d);canvas.height=Math.round(Hh*d);mainCtx.setTransform(d,0,0,d,0,0);
