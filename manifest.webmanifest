@@ -8,5 +8,5 @@
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#2563EB",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "icons": [{ "src": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232563EB'/%3E%3Cpath%20d='M16%2046V18h32v28H16zm0-12h14m0-16v28m0-10h18'%20fill='none'%20stroke='%23fff'%20stroke-width='4'%20stroke-linejoin='round'%20stroke-linecap='round'/%3E%3C/svg%3E", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }
