@@ -243,3 +243,46 @@ body{margin:0;font-family:var(--font)}
 .lay.proj .nm{cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 0}
 .lay.proj.on{background:var(--accsoft)}.lay.proj.on .nm{color:var(--acc);font-weight:700;cursor:default}
 .lay.proj:not(.on):hover{background:var(--hover)}
+/* X Y points dialog, in the shadcn manner: rounded inputs with a soft ring on focus, one row per point */
+.ptdlg{--ring:color-mix(in srgb,var(--ink) 18%,transparent);position:fixed;inset:0;margin:auto;padding:0;width:min(440px,calc(100% - 32px));max-height:min(640px,calc(100% - 32px));color:var(--ink);display:flex;flex-direction:column;overflow:hidden;border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.18)}
+.ptdlg:not([open]){display:none}
+.ptdlg[open]{animation:ptin .16s ease-out}
+@keyframes ptin{from{opacity:0;transform:translateY(6px) scale(.98)}}
+.ptdlg::backdrop{background:rgba(0,0,0,.5)}
+.ptdlg .dh{padding:18px 20px 6px 14px;border:0}
+.ptdlg .dh .di{background:var(--field);color:var(--ink);border:1px solid var(--line)}
+.ptbody{padding:12px 20px 4px;display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0;flex:1}
+.ptrows{display:flex;flex-direction:column;gap:8px;max-height:min(300px,40vh);overflow:auto;padding:3px;margin:-3px}
+.ptr{display:grid;grid-template-columns:20px 1fr 1fr 32px;gap:8px;align-items:center}
+.ptr>*{min-width:0}
+.ptr>span:first-child{color:var(--mute);font-size:11.5px;text-align:center;font-variant-numeric:tabular-nums}
+.ptr.ph{margin-bottom:-2px}
+.ptr.ph span{font-size:12px;font-weight:600;color:var(--ink);padding:0 2px}
+.ptr.ph em{font-style:normal;font-weight:400;color:var(--mute)}
+.ptr input{height:36px;width:100%;box-sizing:border-box;font:13px ui-monospace,Consolas,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:0 10px;box-shadow:0 1px 2px rgba(0,0,0,.05);transition:border-color .12s,box-shadow .12s;-webkit-user-select:text;user-select:text}
+.ptr input:hover{border-color:color-mix(in srgb,var(--ink) 22%,var(--line))}
+.ptr input:focus,.app .ptr input:focus-visible{outline:none;border-color:color-mix(in srgb,var(--ink) 45%,var(--line));box-shadow:0 0 0 3px var(--ring)}
+.ptr .ic{width:32px;height:32px;border:0;background:transparent;border-radius:8px;display:grid;place-items:center;color:var(--mute)}
+.ptr .ic svg{width:15px;height:15px}
+.ptr .ic:hover{background:var(--hover);color:var(--warn)}
+.ptdlg .btn{height:36px;border-radius:8px;border-color:var(--line);box-shadow:0 1px 2px rgba(0,0,0,.05);font-weight:500;transition:background .12s}
+.ptdlg .btn:hover{background:var(--hover)}
+.ptdlg .btn.pri{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.ptdlg .btn.pri:hover{background:color-mix(in srgb,var(--ink) 88%,var(--bg))}
+.ptdlg .btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+.ptdlg .btn:disabled{opacity:.5;cursor:not-allowed}
+.ptadd{width:100%;flex:none;border-style:dashed!important;box-shadow:none!important;color:var(--mute)}
+.ptadd:hover{color:var(--ink)}
+.pttip{margin:-4px 0 0;color:var(--mute);font-size:11.5px;line-height:1.7}
+.pttip kbd{font:500 10.5px var(--font);border:1px solid var(--line);border-radius:4px;padding:0 5px;background:var(--field);color:var(--ink)}
+.ptopt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.ptopt b{display:block;font-size:12.5px;font-weight:600}
+.ptopt small{display:block;color:var(--mute);font-size:11.5px}
+.ptdlg .sw.on{background:var(--ink)}
+.ptdlg .sw.on::after{background:var(--bg)}
+.ptfoot{display:flex;align-items:center;gap:8px;padding:16px 20px 18px}
+.ptfoot .btn{flex:none;padding:0 16px}
+.ptcnt{margin-inline-end:auto;font-size:12px;color:var(--mute)}
+.ptcnt.ok{color:var(--ink);font-weight:500}
+@media (max-width:520px){.ptdlg{width:100%;max-width:none;max-height:92%;margin:auto 0 0;border-radius:14px 14px 0 0}.ptfoot{flex-wrap:wrap;padding-bottom:max(18px,env(safe-area-inset-bottom))}.ptfoot .btn{flex:1}.ptcnt{flex-basis:100%;text-align:center}}
+@media (prefers-reduced-motion:reduce){.ptdlg[open]{animation:none}.ptr input{transition:none}}

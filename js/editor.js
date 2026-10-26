@@ -24,7 +24,7 @@ function bbox(){if(ents().length>2000){const X=[],Y=[];ents().forEach(e=>{const 
   let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;const ad=(x,y)=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)};
   ents().forEach(e=>{if(e.t==='axes'){outline(e)[0].forEach(p=>ad(...p));return}(e.pts||e.poly||[]).forEach(p=>ad(...p));if(e.t==='dim'){const[A,B]=dimPts(e);ad(...A);ad(...B)}if(e.c&&e.t!=='door'&&e.t!=='window'){if(e.t==='text'){ad(e.c[0],e.c[1]);return}const[w,d]=dims(e),r=Math.hypot(w,d)/2;ad(e.c[0]-r,e.c[1]-r);ad(e.c[0]+r,e.c[1]+r)}});
   return x0>x1?[0,0,16000,12000]:[x0,y0,x1,y1]}
-function fit(){const[x0,y0,x1,y1]=bbox(),m=mob(),pl=m?14:(lPane?400:84),pr=m?14:(rOpen?400:84),pt=m?62:28,pb=m?80:28,w=W-pl-pr,h=Hh-pt-pb;s=Math.min(w/(x1-x0),h/(y1-y0));s0=s;ox=pl+w/2-(x0+x1)/2*s;oy=pt+h/2+(y0+y1)/2*s}
+function fit(b=bbox()){const[x0,y0,x1,y1]=b,m=mob(),pl=m?14:(lPane?400:84),pr=m?14:(rOpen?400:84),pt=m?62:28,pb=m?80:28,w=W-pl-pr,h=Hh-pt-pb;s=Math.min(w/(x1-x0),h/(y1-y0));s0=s;ox=pl+w/2-(x0+x1)/2*s;oy=pt+h/2+(y0+y1)/2*s}
 function zoomAt(x,y,f){const w=toW(x,y);s=Math.max(.004,Math.min(5,s*f));ox=x-w[0]*s;oy=y+w[1]*s;draw();const z=$('[data-zoom]');if(z)z.textContent=fa(Math.round(s/s0*100))+'٪'}
 
 // ---------- drawing ----------

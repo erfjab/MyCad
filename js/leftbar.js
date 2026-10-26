@@ -8,9 +8,9 @@ function leftUI(){const pop=$('[data-lpop]'),pin=pop.querySelector('.pin');$$('[
   head(pin,lPane,titles[lPane][0],titles[lPane][1],()=>{lPane=null;leftUI()});
   const sec=el('div','ds');pin.append(sec);
   if(lPane==='file'){const nm=el('input','fname');nm.value=P.name;nm.setAttribute('aria-label','نام پروژه');nm.onchange=()=>renameProject(nm.value);nm.onkeydown=ev=>{if(ev.key==='Enter')nm.blur()};
-    sec.append(nm,el('div','saved',`<span data-saved></span>`));const acts=el('div','acts'),nw=el('button','btn',svg('plus')+'پروژه‌ی جدید'),op=el('button','btn',svg('open')+'باز کردن…'),bk=el('button','btn',svg('down')+'فایل پشتیبان');
+    sec.append(nm,el('div','saved',`<span data-saved></span>`));const acts=el('div','acts'),nw=el('button','btn',svg('plus')+'پروژه‌ی جدید'),op=el('button','btn',svg('open')+'باز کردن…'),bk=el('button','btn',svg('down')+'فایل پشتیبان'),xy=el('button','btn',svg('pin')+'نقاط X Y');
     nw.onclick=newProject;bk.title='کل پروژه به صورت یک فایل .mycad؛ با «باز کردن» دوباره باز می‌شود';bk.onclick=backupProject;
-    op.onclick=()=>{let i=$('[data-openfile]');if(!i){i=document.createElement('input');i.type='file';i.accept='.dwg,.dxf,.mycad,.json';i.hidden=true;i.dataset.openfile='';i.onchange=()=>{if(i.files[0])openCad(i.files[0]);i.value=''};app.append(i)}i.click()};acts.append(nw,op,bk);sec.append(acts);
+    op.onclick=()=>{let i=$('[data-openfile]');if(!i){i=document.createElement('input');i.type='file';i.accept='.dwg,.dxf,.mycad,.json';i.hidden=true;i.dataset.openfile='';i.onchange=()=>{if(i.files[0])openCad(i.files[0]);i.value=''};app.append(i)}i.click()};xy.title='وارد کردن فهرست نقاط با مختصات X Y (مثل UTM)';xy.onclick=pointsDlg;acts.append(nw,op,bk,xy);sec.append(acts);
     if(myList.length){const s1=el('div','ds');s1.append(el('p','eb','پروژه‌های من'));const list=el('div','list');myList.forEach(it=>{const r=el('div','lay proj'+(it.id===P.id?' on':''),`<span class="nm">${htmlEsc(it.name)}</span><em>${new Date(it.updated).toLocaleDateString('fa-IR')}</em>`),del=el('button','ic',svg('trash'));
       r.querySelector('.nm').onclick=()=>{if(it.id!==P.id)openSaved(it.id)};del.title='پاک کردن '+it.name;del.onclick=()=>deleteSaved(it.id);r.append(del);list.append(r)});s1.append(list);pin.append(s1)}
     expUI(pin);

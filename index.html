@@ -38,6 +38,16 @@
     <div class="dyn" data-dyn hidden></div>
     <div class="selbar" data-selbar hidden></div>
     <div class="toast" data-toast hidden></div>
+    <dialog class="card ptdlg" data-ptdlg aria-label="وارد کردن نقاط">
+      <div class="dh"><span class="di" data-icon="pin"></span><div><b>وارد کردن نقاط</b><small>مختصات به متر، مثل UTM · شکل وسط همین نما می‌آید</small></div><button class="x" data-ptx data-icon="close" title="بستن" aria-label="بستن"></button></div>
+      <div class="ptbody">
+        <div class="ptrows" data-ptrows dir="ltr"><div class="ptr ph"><span></span><span>X <em>· شرقی</em></span><span>Y <em>· شمالی</em></span><span></span></div></div>
+        <button class="btn ptadd" data-ptadd data-icon="plus">افزودن ردیف</button>
+        <p class="pttip"><kbd>Enter</kbd> ردیف بعد · فهرست کپی‌شده از اکسل یا فایل متنی را در یک خانه بچسبانید</p>
+        <label class="ptopt"><span><b>شکل بسته</b><small>آخرین نقطه به اولی وصل شود</small></span><button class="sw on" data-ptclose aria-label="شکل بسته"></button></label>
+      </div>
+      <div class="ptfoot"><span class="ptcnt" data-ptcount></span><button class="btn" data-ptcancel>انصراف</button><button class="btn pri" data-ptgo data-icon="check">رسم روی نقشه</button></div>
+    </dialog>
   </div>
 </div>
 
@@ -48,6 +58,7 @@
 <script src="js/panels.js"></script>
 <script src="js/export.js"></script>
 <script src="js/dwg-import.js"></script>
+<script src="js/points-import.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/leftbar.js"></script>
 <script src="js/main.js"></script>
